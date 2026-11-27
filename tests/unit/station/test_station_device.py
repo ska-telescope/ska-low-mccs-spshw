@@ -28,11 +28,18 @@ import pytest
 import tango
 from astropy.utils import iers
 from ska_control_model import AdminMode, HealthState, ResultCode, TaskStatus
+from ska_control_model.health_rollup import health_report
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.station import SpsStation
+from ska_low_mccs_spshw.station.station_device import (
+    _admin_mode_health_details,
+    _detailed_health_report,
+    _wren_health_details,
+)
+from ska_low_mccs_spshw.station.station_health_details import HealthDetailText
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
@@ -2512,12 +2519,301 @@ def test_health_events_share_timestamp(
     state_event = change_event_callbacks["health_state"].assert_change_event(
         HealthState.FAILED
     )["call_args"][0]
+    # The mocked health gives no reason, so the station gives a generic one.
     report_event = change_event_callbacks["health_report"].assert_change_event(
-        json.dumps({"tiles": {tile_trl: "FAILED"}})
+        json.dumps(
+            {
+                "tiles": {tile_trl: "FAILED"},
+                "details": {
+                    tile_trl: {"reason": f"{tile_trl} is FAILED", "remedy": ""}
+                },
+            }
+        )
     )["call_args"][0]
     assert state_event.attr_value.time.totime() == (
         report_event.attr_value.time.totime()
     )
+
+
+def _health_details(station_device: SpsStation) -> dict[str, dict[str, str]]:
+    """
+    Read the details of the station's healthReport.
+
+    :param station_device: the SPS station Tango device under test.
+    :return: the reason and remedy of each source that is not OK.
+    """
+    return json.loads(station_device.healthReport).get("details", {})
+
+
+def test_health_report_details(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the reasons and remedies of the station's own checks in healthReport.
+
+    Each check gives its reason and remedy while it is not OK, and its
+    details are removed once it is OK again. When the station goes
+    OFFLINE, every source gives the offline reason and remedy.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been
+        configured with the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    tile_trls = [get_tile_name(i + 1) for i in range(len(mock_tile_device_proxies))]
+    subrack_trls = [get_subrack_name(1)]
+    last_tile = len(mock_tile_device_proxies) - 1
+    for mock in mock_tile_device_proxies:
+        mock.configure_mock(tileProgrammingState="Synchronised")
+    station_device.subscribe_event(
+        "healthState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["health_state"],
+    )
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["health_state"].assert_change_event(
+        HealthState.OK, lookahead=5, consume_nonmatches=True
+    )
+    assert _health_details(station_device) == {}
+
+    # PPS delay spread over the FAILED threshold. The defaults are
+    # DEGRADED at >= 4, and FAILED at > 9.
+    delays = [0, 1, 11, 2]
+    station_device.MockComponentStateChange(
+        json.dumps({"ppsDelaySpread": 11, "synchronisedPpsDelays": delays})
+    )
+    assert _health_details(station_device)["self"] == {
+        "reason": HealthDetailText.PPS_REASON.format(
+            spread=11, degraded=4, failed=9, delays=delays
+        ),
+        "remedy": HealthDetailText.PPS_REMEDY.value,
+    }
+    station_device.MockComponentStateChange(
+        json.dumps({"ppsDelaySpread": 0, "synchronisedPpsDelays": [0, 0, 0, 0]})
+    )
+    assert "self" not in _health_details(station_device)
+
+    # One tile not Synchronised.
+    station_device.MockTileProgrammingStateChange(
+        json.dumps({"tile_id": 1, "value": "Unknown"})
+    )
+    tiles_by_state = {
+        "Synchronised": [i for i in range(len(tile_trls)) if i != 1],
+        "Unknown": [1],
+    }
+    assert _health_details(station_device)["tile_programming_state"] == {
+        "reason": HealthDetailText.TILE_PROGRAMMING_STATE_REASON.format(
+            tiles_by_state=tiles_by_state
+        ),
+        "remedy": HealthDetailText.TILE_PROGRAMMING_STATE_REMEDY.value,
+    }
+    station_device.MockTileProgrammingStateChange(
+        json.dumps({"tile_id": 1, "value": "Synchronised"})
+    )
+    assert "tile_programming_state" not in _health_details(station_device)
+
+    # The final tile flags beamformer packets.
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": last_tile, "fpga0_count": 5, "fpga1_count": 0})
+    )
+    assert _health_details(station_device)["beamformer_flagged_count"] == {
+        "reason": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REASON.format(
+            tile_id=last_tile, fpgas="fpga0"
+        ),
+        "remedy": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REMEDY.value,
+    }
+    station_device.MockTileFlaggedCountChange(
+        json.dumps({"tile_id": last_tile, "fpga0_count": 0, "fpga1_count": 0})
+    )
+    assert "beamformer_flagged_count" not in _health_details(station_device)
+
+    # Offline, every source is UNKNOWN, with the offline reason.
+    station_device.adminMode = AdminMode.OFFLINE  # type: ignore[assignment]
+    offline_details = {
+        "reason": HealthDetailText.OFFLINE_REASON.format(admin_mode="OFFLINE"),
+        "remedy": HealthDetailText.OFFLINE_REMEDY.value,
+    }
+    station_sources = [
+        "self",
+        "tile_programming_state",
+        "beamformer_daisy_chain",
+        "tile_data_routing",
+        "beamformer_flagged_count",
+    ]
+    assert _health_details(station_device) == {
+        source: offline_details for source in station_sources + subrack_trls + tile_trls
+    }
+
+
+@pytest.mark.parametrize(
+    "admin_mode", [AdminMode.OFFLINE, AdminMode.NOT_FITTED, AdminMode.RESERVED]
+)
+def test_admin_mode_health_details_offline(admin_mode: AdminMode) -> None:
+    """
+    Test that every source gets the offline details while not online.
+
+    :param admin_mode: the station's adminMode.
+    """
+    devices = ["low-mccs/tile/t1", "low-mccs/subrack/s1", "low-mccs/wren/w1"]
+    details = _admin_mode_health_details(admin_mode, devices, "low-mccs/wren/w1", 0.0)
+    offline_details = {
+        "reason": HealthDetailText.OFFLINE_REASON.format(admin_mode=admin_mode.name),
+        "remedy": HealthDetailText.OFFLINE_REMEDY.value,
+    }
+    assert details == {
+        source: offline_details
+        for source in [
+            "self",
+            "tile_programming_state",
+            "beamformer_daisy_chain",
+            "tile_data_routing",
+            "beamformer_flagged_count",
+            *devices,
+        ]
+    }
+
+
+@pytest.mark.parametrize("admin_mode", [AdminMode.ONLINE, AdminMode.ENGINEERING])
+def test_admin_mode_health_details_awaiting(admin_mode: AdminMode) -> None:
+    """
+    Test that every source gets the awaiting details when coming online.
+
+    Each of the station's own checks, each device, and WREN, has its own
+    remedy.
+
+    :param admin_mode: the station's adminMode.
+    """
+    tile, subrack, wren = (
+        "low-mccs/tile/t1",
+        "low-mccs/subrack/s1",
+        "low-mccs/wren/w1",
+    )
+    # 2026-01-02T03:04:05+00:00
+    timestamp = datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc).timestamp()
+    details = _admin_mode_health_details(
+        admin_mode, [tile, subrack, wren], wren, timestamp
+    )
+    reason = HealthDetailText.AWAITING_REASON.format(since="2026-01-02T03:04:05+00:00")
+    assert details == {
+        "self": {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_PPS_REMEDY.value,
+        },
+        "tile_programming_state": {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_TILE_PROGRAMMING_STATE_REMEDY.value,
+        },
+        "beamformer_daisy_chain": {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_DAISY_CHAIN_REMEDY.value,
+        },
+        "tile_data_routing": {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_TILE_DATA_ROUTING_REMEDY.value,
+        },
+        "beamformer_flagged_count": {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_FLAGGED_COUNT_REMEDY.value,
+        },
+        tile: {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_DEVICE_REMEDY.format(device=tile),
+        },
+        subrack: {
+            "reason": reason,
+            "remedy": HealthDetailText.AWAITING_DEVICE_REMEDY.format(device=subrack),
+        },
+        wren: {
+            "reason": reason,
+            "remedy": HealthDetailText.WREN_AWAITING_REMEDY.format(device=wren),
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    ("health", "details", "expected_reason"),
+    [
+        pytest.param(
+            HealthState.UNKNOWN,
+            None,
+            HealthDetailText.WREN_UNKNOWN_REASON.format(device="low-mccs/wren/w1"),
+            id="unknown, no healthInfo",
+        ),
+        pytest.param(
+            HealthState.DEGRADED,
+            None,
+            HealthDetailText.WREN_REASON.format(
+                device="low-mccs/wren/w1", state="DEGRADED"
+            ),
+            id="degraded, no healthInfo",
+        ),
+        pytest.param(
+            HealthState.FAILED,
+            {"reason": "PTP is not locked"},
+            "PTP is not locked",
+            id="failed, with healthInfo",
+        ),
+    ],
+)
+def test_wren_health_details(
+    health: HealthState,
+    details: dict[str, str] | None,
+    expected_reason: str,
+) -> None:
+    """
+    Test the reason and remedy that the station gives for WREN.
+
+    WREN's own reason, from its healthInfo, replaces the generic one. The
+    remedy is always the station's.
+
+    :param health: WREN's health.
+    :param details: the details from WREN's healthInfo, or None.
+    :param expected_reason: the reason that the station should give.
+    """
+    wren = "low-mccs/wren/w1"
+    assert _wren_health_details(wren, health, details) == {
+        "reason": expected_reason,
+        "remedy": HealthDetailText.WREN_REMEDY.format(device=wren),
+    }
+
+
+def test_detailed_health_report() -> None:
+    """
+    Test that healthReport adds flat details to the rollup's health report.
+
+    A source that gives no details gets the generic reason, and an empty
+    remedy. A report of only OK sources has no details.
+    """
+    tile_details = {"reason": "temperatures_board is in ATTR_WARNING", "remedy": "r"}
+    summary: Any = {
+        "self": HealthState.DEGRADED,
+        "tile_programming_state": HealthState.OK,
+        "tiles": {
+            "low-mccs/tile/t1": HealthState.DEGRADED,
+            "low-mccs/tile/t2": HealthState.OK,
+        },
+    }
+    assert _detailed_health_report(summary, {"low-mccs/tile/t1": tile_details}) == {
+        **health_report(summary),
+        "details": {
+            "self": {
+                "reason": HealthDetailText.GENERIC_REASON.format(
+                    source="self", state="DEGRADED"
+                ),
+                "remedy": "",
+            },
+            "low-mccs/tile/t1": tile_details,
+        },
+    }
+
+    all_ok: Any = {
+        "self": HealthState.OK,
+        "tiles": {"low-mccs/tile/t1": HealthState.OK},
+    }
+    assert "details" not in _detailed_health_report(all_ok, {})
 
 
 def test_programing_state_health_rollup(

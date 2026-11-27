@@ -17,8 +17,10 @@ import ipaddress
 import itertools
 import json
 import logging
+import re
 import threading
 import time
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
@@ -55,6 +57,7 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
 from .group_utils import group_command, group_write_attribute, raise_for_group_failures
+from .station_health_details import HealthDetailText
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
@@ -118,7 +121,61 @@ _CACHED_TILE_ATTRIBUTES = (
     "cspRounding",
     "dsp_station_beamf_discarded_or_flagged_packet_count_fpga0",
     "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+    "healthReport",
 )
+
+# A line of a healthReport from ska-low-mccs-common's HealthRecorder:
+# "<attribute> is in <quality> with value <value>". Group 1 is the line
+# without its value.
+_HEALTH_REPORT_ATTRIBUTE_LINE = re.compile(r"^(\S+ is in ATTR_\w+) with value ")
+
+# A line of a healthReport once its value is stripped. Group 1 is the
+# attribute's quality.
+_HEALTH_REPORT_QUALITY_LINE = re.compile(r"^\S+ is in (ATTR_\w+)$")
+
+
+def _strip_health_report_values(health_report: str) -> str:
+    """
+    Remove the attribute values from a tile or subrack healthReport.
+
+    If a health report is caused by an attribute that is outside its
+    healthy range, the report will update with the attribute value.
+
+    This generates a lot more reports, while the only relevant info
+    is which attribute is the cause (the values are still available
+    on the actual device)
+
+    This method removes that value and keeps the attribute name and
+    state. This is enough information to provide as part of health
+    details
+
+    :param health_report: the device's healthReport.
+    :return: the report without values.
+    """
+    stripped: list[str] = []
+    in_attribute_lines = False
+    for line in health_report.splitlines():
+        match = _HEALTH_REPORT_ATTRIBUTE_LINE.match(line)
+        if match:
+            stripped.append(match.group(1))
+            in_attribute_lines = True
+        elif not in_attribute_lines:
+            stripped.append(line)
+    return "\n".join(stripped)
+
+
+@dataclass(frozen=True)
+class _DaisyChainStage:
+    """One stage of the beamformer daisy chain check."""
+
+    name: str
+    # Called with the component manager. Returns True if the stage
+    # passes, False if it fails, or None if it cannot yet be verified.
+    check: Callable[[SpsStationComponentManager], bool | None]
+    failure_reason: HealthDetailText
+    remedy: HealthDetailText
+    # Required if, and only if, check can return None.
+    unknown_reason: HealthDetailText | None = None
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -206,6 +263,7 @@ class _TileProxy(DeviceComponentManager):
             "isBeamformerRunning": self._on_attribute_change,
             "channeliserRounding": self._on_attribute_change,
             "cspRounding": self._on_attribute_change,
+            "healthReport": self._on_attribute_change,
         }
 
     def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
@@ -269,6 +327,50 @@ class _TileProxy(DeviceComponentManager):
         """
         assert self._proxy is not None  # for the type checker
         return self._proxy.adcPower
+
+
+class _SubrackProxy(DeviceComponentManager):
+    """A proxy to a subrack, for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: _SubrackProxy,
+        fqdn: str,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
+        event_serialiser: Optional[EventSerialiser] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param logger: the logger to be used by this object.
+        :param communication_state_changed_callback: callback
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
+        :param event_serialiser: the event serialiser to be used by this object
+        """
+        self._attribute_changed_callback = attribute_changed_callback
+        super().__init__(
+            fqdn,
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            event_serialiser=event_serialiser,
+        )
+
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "healthReport": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._name, *args, **kwargs)
 
 
 class _LMCDaqProxy(DeviceComponentManager):
@@ -489,6 +591,7 @@ class _WrenProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
         event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
@@ -503,8 +606,11 @@ class _WrenProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
         :param event_serialiser: the event serialiser to be used by this object
         """
+        self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
             logger,
@@ -515,6 +621,16 @@ class _WrenProxy(DeviceComponentManager):
 
         # Create an event to store whether the health state is ok
         self._health_state_ok = threading.Event()
+
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            # WREN explains its health in healthInfo, not healthReport.
+            "healthInfo": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._name, *args, **kwargs)
 
     def _update_health(
         self,
@@ -683,6 +799,9 @@ class SpsStationComponentManager(
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}  # Now obsolete?
+        self._tile_fqdns = list(tile_fqdns)  # indexed by logical tile id
+        # The latest healthReport of each tile and subrack, without values.
+        self._sub_device_health_reports: dict[str, str] = {}
         self._number_of_tiles = len(tile_fqdns)
         # cppTango doesn't handle None in a list of floats well, so unknown
         # per-tile readings are represented as an np.nan-filled np.ndarray
@@ -698,10 +817,12 @@ class SpsStationComponentManager(
         self._beamformer_daisy_chain_valid: Optional[bool] = None
         self._tile_40g_core_configs: dict[int, list[dict[str, Any]] | None] = {}
         self._tile_data_routing_valid: Optional[bool] = None
+        self._beamformer_daisy_chain_details: dict[str, str] | None = None
         # None when the final tile's count is INVALID.
         self._final_tile_fpga0_flagged_count: Optional[int] = 0
         self._final_tile_fpga1_flagged_count: Optional[int] = 0
         self._final_tile_beamformer_flagged_count_ok: Optional[bool] = None
+        self._final_tile_beamformer_flagged_count_details: dict[str, str] | None = None
         for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = np.full(TileData.ADC_CHANNELS, np.nan)
             self._static_delays[logical_tile_id] = np.full(
@@ -737,13 +858,14 @@ class SpsStationComponentManager(
         self._tile_group = tile_group
 
         self._subrack_proxies = {
-            subrack_fqdn: DeviceComponentManager(
+            subrack_fqdn: _SubrackProxy(
                 subrack_fqdn,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
                 functools.partial(self._subrack_state_changed, subrack_fqdn),
+                self._on_subrack_attribute_change,
                 event_serialiser=self._event_serialiser,
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
@@ -804,6 +926,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, self._wren_trl
                 ),
                 functools.partial(self._wren_state_changed, self._wren_trl),
+                self._on_wren_attribute_change,
                 event_serialiser=self._event_serialiser,
             )
             self._wren_power_state = {wren_trl: PowerState.UNKNOWN}
@@ -1376,7 +1499,9 @@ class SpsStationComponentManager(
         # HealthStateRollup.online = True would never recover.
         self._beamformer_daisy_chain_valid = None
         self._tile_data_routing_valid = None
+        self._beamformer_daisy_chain_details = None
         self._final_tile_beamformer_flagged_count_ok = None
+        self._final_tile_beamformer_flagged_count_details = None
         self._communication_manager.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
@@ -1510,7 +1635,9 @@ class SpsStationComponentManager(
             attribute_name in _FINAL_TILE_ATTRIBUTES
             and logical_tile_id != self._number_of_tiles - 1
         ):
-            # Only the final tile's value is used.
+            # Certain attributes should only be considered for
+            # the last tile, as such, if we see that attribute from
+            # a different tile, we skip
             return False
         match attribute_name:
             case "timing_pps_delay":
@@ -1574,6 +1701,11 @@ class SpsStationComponentManager(
                 self._final_tile_fpga0_flagged_count = None
             case "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1":
                 self._final_tile_fpga1_flagged_count = None
+            case "healthreport":
+                # Nothing to publish: the next health change has no details.
+                self._sub_device_health_reports.pop(
+                    self._tile_fqdns[logical_tile_id], None
+                )
             case _:
                 return False
         return True
@@ -1654,6 +1786,10 @@ class SpsStationComponentManager(
         :param attribute_value: the new value.
         """
         match attribute_name:
+            case "healthreport":
+                self._sub_device_health_report_changed(
+                    self._tile_fqdns[logical_tile_id], attribute_value
+                )
             case "adcpower":
                 self._adc_power[logical_tile_id] = np.array(
                     attribute_value, dtype=float
@@ -1857,33 +1993,47 @@ class SpsStationComponentManager(
 
         The result is True if every stage passes, otherwise the result of
         the first stage that does not: False if it failed, or None if it
-        cannot yet be verified.
+        cannot yet be verified. If every tile is OFF, there is no chain to
+        check, so the result is True.
+
+        Unless the result is True, the details give the reason that stage
+        failed, or cannot be verified, and a remedy.
         """
         valid: Optional[bool] = True
-        failed_check = ""
+        details: dict[str, str] | None = None
+        failed_stage = ""
         power_states = list(self._tile_power_states.values())
         if not all(power == PowerState.OFF for power in power_states):
-            for check in (
-                self._check_daisy_chain_tiles_on,
-                self._check_daisy_chain_tiles_online,
-                self._check_daisy_chain_tiles_initialised,
-                self._validate_beamformer_daisy_chain_ips,
-                self._check_daisy_chain_tiles_receiving,
-            ):
-                valid = check()
-                if not valid:
-                    failed_check = check.__name__
-                    break
+            # Stop at the first stage that does not pass
+            for stage in self._DAISY_CHAIN_STAGES:
+                valid = stage.check(self)
+                if valid:
+                    continue
+                failed_stage = stage.name
+                reason = (
+                    stage.unknown_reason
+                    if valid is None and stage.unknown_reason is not None
+                    else stage.failure_reason
+                )
+                details = {"reason": reason.value, "remedy": stage.remedy.value}
+                break
 
-        if valid == self._beamformer_daisy_chain_valid:
+        if (valid, details) == (
+            self._beamformer_daisy_chain_valid,
+            self._beamformer_daisy_chain_details,
+        ):
             return
-        if failed_check:
+        if failed_stage:
             self.logger.warning(
-                f"Beamformer daisy chain check {failed_check} returned {valid}"
+                f"Beamformer daisy chain check {failed_stage} returned {valid}"
             )
         self._beamformer_daisy_chain_valid = valid
+        self._beamformer_daisy_chain_details = details
         if self._component_state_callback:
-            self._component_state_callback(beamformerDaisyChainValid=valid)
+            self._component_state_callback(
+                beamformerDaisyChainValid=valid,
+                beamformerDaisyChainDetails=details,
+            )
 
     def _check_daisy_chain_tiles_on(
         self: SpsStationComponentManager,
@@ -1991,6 +2141,41 @@ class SpsStationComponentManager(
                 return False
         return True
 
+    # The stages of the beamformer daisy chain check in order.
+    _DAISY_CHAIN_STAGES: tuple[_DaisyChainStage, ...] = (
+        _DaisyChainStage(
+            name="tiles_on",
+            check=_check_daisy_chain_tiles_on,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="tiles_online",
+            check=_check_daisy_chain_tiles_online,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="tiles_initialised",
+            check=_check_daisy_chain_tiles_initialised,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="destination_ips",
+            check=_validate_beamformer_daisy_chain_ips,
+            failure_reason=HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
+            unknown_reason=HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
+        ),
+        _DaisyChainStage(
+            name="tiles_receiving",
+            check=_check_daisy_chain_tiles_receiving,
+            failure_reason=HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REMEDY,
+        ),
+    )
+
     def _validate_tile_data_routing(
         self: SpsStationComponentManager,
     ) -> None:
@@ -2011,9 +2196,22 @@ class SpsStationComponentManager(
                 "CSP ingest address is not configured, "
                 "so the station beam routing is not checked"
             )
+        details: dict[str, str] | None = None
+        if valid is False:
+            details = {
+                "reason": HealthDetailText.TILE_DATA_ROUTING_WRONG_REASON.value,
+                "remedy": HealthDetailText.TILE_DATA_ROUTING_WRONG_REMEDY.value,
+            }
+        elif valid is None:
+            details = {
+                "reason": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REASON.value,
+                "remedy": HealthDetailText.TILE_DATA_ROUTING_UNKNOWN_REMEDY.value,
+            }
         self._tile_data_routing_valid = valid
         if self._component_state_callback:
-            self._component_state_callback(tileDataRoutingValid=valid)
+            self._component_state_callback(
+                tileDataRoutingValid=valid, tileDataRoutingDetails=details
+            )
 
     def _check_csp_ingest_routes(
         self: SpsStationComponentManager, log_mismatches: bool = True
@@ -2043,6 +2241,12 @@ class SpsStationComponentManager(
             for arp_table_entry in (0, 1):
                 route = routes.get((core_id, arp_table_entry))
                 if route is None:
+                    if log_mismatches:
+                        self.logger.warning(
+                            f"Tile {last} core {core_id} ARP table entry "
+                            f"{arp_table_entry} has no route to CSP ingest: "
+                            f"Expected {expected}"
+                        )
                     return False
                 actual = {field: route.get(field) for field in expected}
                 if actual != expected:
@@ -2066,22 +2270,46 @@ class SpsStationComponentManager(
         neither count is non-zero but one is INVALID, the status is unknown
         (None).
         """
-        counts = (
-            self._final_tile_fpga0_flagged_count,
-            self._final_tile_fpga1_flagged_count,
-        )
+        fpga = {
+            "fpga0": self._final_tile_fpga0_flagged_count,
+            "fpga1": self._final_tile_fpga1_flagged_count,
+        }
+        non_zero = [f for f, c in fpga.items() if c is not None and c != 0]
+        invalid = [f for f, c in fpga.items() if c is None]
         ok: Optional[bool]
-        if any(count is not None and count != 0 for count in counts):
+        details: dict[str, str] | None = None
+        final_tile_id = self._number_of_tiles - 1
+        if non_zero:
             ok = False
-        elif None in counts:
+            details = {
+                "reason": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REASON.format(
+                    tile_id=final_tile_id, fpgas=", ".join(non_zero)
+                ),
+                "remedy": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REMEDY.value,
+            }
+        elif invalid:
             ok = None
+            details = {
+                "reason": HealthDetailText.FLAGGED_COUNT_INVALID_REASON.format(
+                    tile_id=final_tile_id, fpgas=", ".join(invalid)
+                ),
+                "remedy": HealthDetailText.FLAGGED_COUNT_INVALID_REMEDY.value,
+            }
         else:
             ok = True
-        if ok == self._final_tile_beamformer_flagged_count_ok:
+        # Fire on a change of details too, e.g. the other FPGA is now non-zero.
+        if (ok, details) == (
+            self._final_tile_beamformer_flagged_count_ok,
+            self._final_tile_beamformer_flagged_count_details,
+        ):
             return
         self._final_tile_beamformer_flagged_count_ok = ok
+        self._final_tile_beamformer_flagged_count_details = details
         if self._component_state_callback:
-            self._component_state_callback(finalTileBeamformerFlaggedCountOk=ok)
+            self._component_state_callback(
+                finalTileBeamformerFlaggedCountOk=ok,
+                finalTileBeamformerFlaggedCountDetails=details,
+            )
 
     def _update_communication_state(
         self: SpsStationComponentManager,
@@ -2122,7 +2350,11 @@ class SpsStationComponentManager(
             self._tile_health_changed_callback(fqdn, HealthState(health))
             # New health model.
             if self._component_state_callback is not None:
-                self._component_state_callback(device_name=fqdn, health=health)
+                self._component_state_callback(
+                    device_name=fqdn,
+                    health=health,
+                    health_details=self._sub_device_health_details(fqdn, health),
+                )
 
     @threadsafe
     def _subrack_state_changed(
@@ -2144,7 +2376,114 @@ class SpsStationComponentManager(
             self._component_state_callback(
                 device_name=fqdn,
                 health=health,
+                health_details=self._sub_device_health_details(fqdn, health),
             )
+
+    def _on_subrack_attribute_change(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        if attribute_name.lower() == "healthreport":
+            self._sub_device_health_report_changed(
+                fqdn,
+                (
+                    ""
+                    if attribute_quality == tango.AttrQuality.ATTR_INVALID
+                    else attribute_value
+                ),
+            )
+
+    def _sub_device_health_report_changed(
+        self: SpsStationComponentManager, fqdn: str, health_report: str
+    ) -> None:
+        """
+        Handle a new healthReport from a tile or subrack.
+
+        healthState and healthReport arrive as separate events, in either
+        order, so a changed report is passed on with the device's current
+        health. Values are stripped first, so a report that differs only
+        in its values is not passed on. "Health is OK" is treated as no
+        report: it explains nothing, and may be stale if it arrived before
+        a change of health.
+
+        :param fqdn: the FQDN of the tile or subrack.
+        :param health_report: the device's new healthReport.
+        """
+        health_report = _strip_health_report_values(health_report)
+        if health_report.strip().rstrip(".") == "Health is OK":
+            health_report = ""
+        if self._sub_device_health_reports.get(fqdn, "") == health_report:
+            # skip reports that we have already
+            return
+        self._sub_device_health_reports[fqdn] = health_report
+
+        proxy: DeviceComponentManager | None
+        if fqdn in self._tile_proxies:
+            proxy = self._tile_proxies[fqdn]
+        elif fqdn in self._subrack_proxies:
+            proxy = self._subrack_proxies[fqdn]
+        else:
+            self.logger.error(
+                f"Health report update failed: {fqdn} not found in "
+                f"{self._tile_proxies} or {self._subrack_proxies}"
+            )
+            return
+
+        if (
+            proxy is not None
+            and proxy.health is not None
+            and self._component_state_callback is not None
+        ):
+            self._component_state_callback(
+                device_name=fqdn,
+                health=proxy.health,
+                health_details=self._sub_device_health_details(fqdn, proxy.health),
+            )
+
+    def _sub_device_health_details(
+        self: SpsStationComponentManager, fqdn: str, health: HealthState
+    ) -> dict[str, str]:
+        """
+        Return the health details of a tile or subrack, from its healthReport.
+
+        The remedy depends on what the report says:
+
+        * attributes in ATTR_WARNING or ATTR_ALARM: outside their limits;
+        * attributes in ATTR_INVALID: the device cannot read them;
+        * anything else, such as text from the old health rules;
+        * no report at all: only a remedy, and the station's generic
+          reason.
+
+        :param fqdn: the FQDN of the tile or subrack.
+        :param health: the device's health.
+        :return: the reason, where there is a report, and the remedy.
+        """
+        health_report = self._sub_device_health_reports.get(fqdn, "")
+        device_type = "tile" if fqdn in self._tile_proxies else "subrack"
+        if not health_report:
+            return {
+                "remedy": HealthDetailText.SUB_DEVICE_NO_REPORT_REMEDY.format(
+                    device_type=device_type
+                ),
+            }
+        qualities = {
+            match.group(1)
+            for line in health_report.splitlines()
+            if (match := _HEALTH_REPORT_QUALITY_LINE.match(line))
+        }
+        if qualities & {"ATTR_WARNING", "ATTR_ALARM"}:
+            remedy = HealthDetailText.SUB_DEVICE_OUT_OF_LIMITS_REMEDY
+        elif "ATTR_INVALID" in qualities or health == HealthState.UNKNOWN:
+            remedy = HealthDetailText.SUB_DEVICE_UNREADABLE_REMEDY
+        else:
+            remedy = HealthDetailText.SUB_DEVICE_RULES_REMEDY
+        return {
+            "reason": health_report,
+            "remedy": remedy.format(device_type=device_type),
+        }
 
     @threadsafe
     def _lmc_daq_state_changed(
@@ -2281,7 +2620,63 @@ class SpsStationComponentManager(
 
             # New health model.
             if self._component_state_callback is not None:
-                self._component_state_callback(device_name=fqdn, health=health)
+                self._component_state_callback(
+                    device_name=fqdn,
+                    health=health,
+                    health_details=self._wren_health_details(fqdn),
+                )
+
+    def _on_wren_attribute_change(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle a change of WREN's healthInfo.
+
+        healthInfo is a list of the reasons WREN is not OK, and is empty
+        when it is OK. It is pushed on every poll, so a reason is passed on,
+        with WREN's current health, only when it changes.
+
+        :param fqdn: the FQDN of the WREN.
+        :param attribute_name: the name of the attribute.
+        :param attribute_value: the new value.
+        :param attribute_quality: the quality of the new value.
+        """
+        if attribute_name.lower() != "healthinfo":
+            return
+        reason = (
+            ""
+            if attribute_quality == tango.AttrQuality.ATTR_INVALID
+            or attribute_value is None
+            else "\n".join(attribute_value)
+        )
+        if self._sub_device_health_reports.get(fqdn, "") == reason:
+            return
+        self._sub_device_health_reports[fqdn] = reason
+        health = self._wren_proxy.health if self._wren_proxy else None
+        if health is not None and self._component_state_callback is not None:
+            self._component_state_callback(
+                device_name=fqdn,
+                health=health,
+                health_details=self._wren_health_details(fqdn),
+            )
+
+    def _wren_health_details(
+        self: SpsStationComponentManager, fqdn: str
+    ) -> dict[str, str] | None:
+        """
+        Return the health details of WREN, from its healthInfo.
+
+        The remedy is added by the station device.
+
+        :param fqdn: the FQDN of the WREN.
+        :return: the reason, or None if WREN has given none.
+        """
+        reason = self._sub_device_health_reports.get(fqdn)
+        return {"reason": reason} if reason else None
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -3720,17 +4115,22 @@ class SpsStationComponentManager(
 
     def _fire_pps_delay_spread(self: SpsStationComponentManager) -> None:
         """Recompute ppsDelaySpread from Synchronised tiles and fire callback."""
-        reported_sync = [
-            self._pps_delays[i]
+        reported_sync = {
+            i: self._pps_delays[i]
             for i in range(self._number_of_tiles)
             if i in self._pps_delays_reported
             and self._tile_programming_state[i] == "Synchronised"
-        ]
+        }
         self._pps_delay_spread = (
-            max(reported_sync) - min(reported_sync) if reported_sync else 0
+            max(reported_sync.values()) - min(reported_sync.values())
+            if reported_sync
+            else 0
         )
         if self._component_state_callback:
-            self._component_state_callback(ppsDelaySpread=self._pps_delay_spread)
+            self._component_state_callback(
+                ppsDelaySpread=self._pps_delay_spread,
+                synchronisedPpsDelays=reported_sync,
+            )
 
     @property
     def beamformer_daisy_chain_valid(

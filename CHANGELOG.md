@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 18.1.0
 
 * [SKB-1579] Optimisations and logs.
   * The "lock held for" warning, logged when the hardware lock is held for longer than half `DefaultLockTimeout`, now splits the time into CPU, run-queue (node CPU contention), blocked (GIL or TPM I/O) and lock-wait time.

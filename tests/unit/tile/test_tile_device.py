@@ -1544,6 +1544,7 @@ class TestMccsTile:
         [
             PowerState.UNKNOWN,
             PowerState.OFF,
+            PowerState.NO_SUPPLY,
             PowerState.ON,
         ],
     )

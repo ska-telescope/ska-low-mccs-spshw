@@ -13,7 +13,7 @@ import sys
 from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
-from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_low_mccs_common import MccsBaseDevice
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from tango import Attribute
@@ -252,23 +252,33 @@ class MccsPdu(MccsBaseDevice, AttributePollingDevice):
         """
         return self._health_model.health_report
 
-    @command(dtype_in=int)
-    def pduPortOn(self: MccsPdu, port: int) -> None:
+    @command(dtype_in=int, dtype_out="DevVarLongStringArray")
+    def pduPortOn(self: MccsPdu, port: int) -> tuple[list[ResultCode], list[str]]:
         """
         Set pdu port On.
 
+        The write is queued for the next poll, so the port switches later.
+
         :param port: The pdu port to turn on
+
+        :return: a result code and a message.
         """
         self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._on_value)
+        return ([ResultCode.OK], [f"Queued the write to switch port {port} on."])
 
-    @command(dtype_in=int)
-    def pduPortOff(self: MccsPdu, port: int) -> None:
+    @command(dtype_in=int, dtype_out="DevVarLongStringArray")
+    def pduPortOff(self: MccsPdu, port: int) -> tuple[list[ResultCode], list[str]]:
         """
         Set pdu port OFF.
 
+        The write is queued for the next poll, so the port switches later.
+
         :param port: The pdu port to turn off
+
+        :return: a result code and a message.
         """
         self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
+        return ([ResultCode.OK], [f"Queued the write to switch port {port} off."])
 
 
 # ----------

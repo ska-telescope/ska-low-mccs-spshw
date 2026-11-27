@@ -27,8 +27,6 @@ import logging
 import math
 from typing import Any, Optional
 
-from utils import walk
-
 from ..subrack.subrack_attribute_filter import SubrackAttributeFilter
 from ..subrack.subrack_data import SubrackData
 from .constants import (
@@ -41,6 +39,7 @@ from .constants import (
     DerivedKey,
     ReadKey,
 )
+from .dict_walk import walk
 
 __all__ = ["DerivedValues"]
 

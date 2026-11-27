@@ -46,7 +46,7 @@ from ska_low_mccs_spshw.tile import (
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
 from ska_low_mccs_spshw.tile.utils import LockTimeoutError
-from time_utils import str_from_float_epoch_utc_time
+from ska_low_mccs_spshw.time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 

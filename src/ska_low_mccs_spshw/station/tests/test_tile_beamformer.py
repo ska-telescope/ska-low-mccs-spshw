@@ -17,9 +17,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
-from time_utils import str_from_float_epoch_utc_time
-
 from ...tile.tile_data import TileData
+from ...time_utils import str_from_float_epoch_utc_time
 from .base_daq_test import BaseDaqTest
 from .data_handlers import BeamDataReceivedHandler
 

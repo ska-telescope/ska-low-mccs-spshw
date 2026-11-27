@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import math
 
-from time_utils import float_epoch_from_str_utc_time, str_from_float_epoch_utc_time
-
+from ..time_utils import float_epoch_from_str_utc_time, str_from_float_epoch_utc_time
 from .tile_data import TileData
 
 __all__ = [

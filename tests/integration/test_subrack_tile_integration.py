@@ -24,12 +24,12 @@ from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from ska_low_mccs_spshw.time_utils import str_from_float_epoch_utc_time
 from tests.test_tools import (
     LRCManager,
     execute_lrc_to_completion,
     wait_for_completed_command_to_clear_from_queue,
 )
-from time_utils import str_from_float_epoch_utc_time
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()

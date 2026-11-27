@@ -14,9 +14,8 @@ from copy import copy
 
 from ska_control_model import ResultCode
 
-from time_utils import str_from_float_epoch_utc_time
-
 from ...tile.tile_data import TileData
+from ...time_utils import str_from_float_epoch_utc_time
 from .base_daq_test import BaseDaqTest
 from .data_handlers import RawDataReceivedHandler
 

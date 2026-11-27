@@ -8,7 +8,7 @@
 """Tests for time conversion functions."""
 import pytest
 
-from time_utils.time_conversion import (
+from ska_low_mccs_spshw.time_utils.time_conversion import (
     float_epoch_from_str_utc_time,
     str_from_float_epoch_utc_time,
 )

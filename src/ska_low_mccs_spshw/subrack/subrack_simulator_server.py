@@ -45,11 +45,6 @@ def _configure_server(
     return uvicorn.Config(subrack_api, host=host, port=port)
 
 
-class _ThreadableServer(uvicorn.Server):
-    def install_signal_handlers(self: _ThreadableServer) -> None:
-        pass
-
-
 class SubrackServerContextManager:
     """A context manager for a subrack server."""
 
@@ -67,7 +62,8 @@ class SubrackServerContextManager:
         server_config = _configure_server(
             backend or SubrackSimulator(), host="127.0.0.1", port=0
         )
-        self._server = _ThreadableServer(config=server_config)
+        # uvicorn installs signal handlers only on the main thread.
+        self._server = uvicorn.Server(config=server_config)
         self._thread = threading.Thread(
             target=self._server.run, args=([self._socket],), daemon=True
         )

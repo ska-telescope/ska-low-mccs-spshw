@@ -37,11 +37,10 @@ from ska_tango_base.callback_scheduler import CallbackScheduler
 from tango import AttrQuality, DevState
 from tango.server import device_property
 
-from utils import walk
-
 from ..subrack.subrack_data import FanMode, SubrackData
 from .constants import HEALTH_NO_VALUE_REASON, HEALTH_STATUS_KEY, ReadKey, RequestError
 from .derived_values import DerivedValues
+from .dict_walk import walk
 from .pdu_link import PduLink
 from .prototype_subrack_attributes import (
     ALL_SIGNALS,

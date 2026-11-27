@@ -700,6 +700,16 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                     tango.AttrQuality.ATTR_VALID,
                 )
 
+        @command(dtype_in="DevString")
+        def MockComponentStateChange(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock the component manager reporting a change of state.
+
+            :param argin: JSON of the keyword arguments to the component
+                state callback, e.g. {"ppsDelaySpread": 10}.
+            """
+            self._component_state_changed(**json.loads(argin))
+
         @command(dtype_in="DevLong")
         def MockTileCommunicationLost(
             self: PatchedSpsStationDevice, argin: int

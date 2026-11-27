@@ -2343,13 +2343,20 @@ def _make_daisy_chain_valid(
 
 
 @pytest.mark.parametrize(
-    ("attribute_name", "attribute_value", "expected_validity", "expected_reason"),
+    (
+        "attribute_name",
+        "attribute_value",
+        "expected_validity",
+        "expected_reason",
+        "expected_remedy",
+    ),
     [
         pytest.param(
             "power",
             PowerState.OFF,
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
             id="tile off",
         ),
         pytest.param(
@@ -2357,6 +2364,7 @@ def _make_daisy_chain_valid(
             PowerState.UNKNOWN,
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
             id="tile power unknown",
         ),
         pytest.param(
@@ -2364,6 +2372,7 @@ def _make_daisy_chain_valid(
             AdminMode.OFFLINE,
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
             id="tile offline",
         ),
         pytest.param(
@@ -2371,6 +2380,7 @@ def _make_daisy_chain_valid(
             None,
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
             id="tile admin mode unknown",
         ),
         pytest.param(
@@ -2378,6 +2388,7 @@ def _make_daisy_chain_valid(
             "Programmed",
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
             id="tile not initialised",
         ),
         pytest.param(
@@ -2385,6 +2396,7 @@ def _make_daisy_chain_valid(
             None,
             False,
             HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
             id="tile programming state unknown",
         ),
         pytest.param(
@@ -2419,6 +2431,7 @@ def _make_daisy_chain_valid(
             ),
             False,
             HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
+            HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
             id="tile wrong dst ip",
         ),
         pytest.param(
@@ -2426,6 +2439,7 @@ def _make_daisy_chain_valid(
             None,
             None,
             HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
+            HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
             id="tile dst ips unknown",
         ),
     ],
@@ -2439,6 +2453,7 @@ def test_beamformer_daisy_chain(
     attribute_value: Any,
     expected_validity: bool | None,
     expected_reason: HealthDetailText,
+    expected_remedy: HealthDetailText,
 ) -> None:
     """
     Test that the station validates the beamformer daisy chain.
@@ -2465,6 +2480,7 @@ def test_beamformer_daisy_chain(
     :param attribute_value: the new value of the attribute.
     :param expected_validity: the expected result of the validation.
     :param expected_reason: the reason of the stage that does not pass.
+    :param expected_remedy: the remedy of the stage that does not pass.
     """
     _make_daisy_chain_valid(station_component_manager, beamformer_routes)
     callbacks["component_state"].assert_call(
@@ -2493,7 +2509,7 @@ def test_beamformer_daisy_chain(
         beamformerDaisyChainValid=expected_validity,
         beamformerDaisyChainDetails={
             "reason": expected_reason.value,
-            "remedy": Anything,
+            "remedy": expected_remedy.value,
         },
         lookahead=5,
         consume_nonmatches=True,
@@ -2553,7 +2569,10 @@ def test_beamformer_daisy_chain_receiving(
 
     # No packet counts reported yet.
     assert station_component_manager.beamformer_daisy_chain_valid is False
-    assert reason() == HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON.value
+    assert station_component_manager._beamformer_daisy_chain_details == {
+        "reason": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON.value,
+        "remedy": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REMEDY.value,
+    }
 
     # The first tile has no previous tile to receive from.
     set_rx_received(0, 0)
@@ -3011,6 +3030,7 @@ def test_beamformer_flagged_count(
     - Repeated identical value does not re-fire (deduplication).
     - fpga0 cleared while fpga1 still zero → True.
     - Non-zero fpga1 → False; clearing → True.
+    - INVALID fpga1 → None, with details that name it.
 
     :param station_component_manager: the SPS station component manager under test.
     :param callbacks: dictionary of driver callbacks.
@@ -3021,12 +3041,10 @@ def test_beamformer_flagged_count(
 
     def non_zero_details(fpga: str) -> dict[str, Any]:
         return {
-            "reason": (
-                f"Final tile (logical tile id {last}) has a non-zero "
-                "dsp_station_beamf_discarded_or_flagged_packet_count on "
-                f"{fpga}"
+            "reason": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REASON.format(
+                tile_id=last, fpgas=fpga
             ),
-            "remedy": Anything,
+            "remedy": HealthDetailText.FLAGGED_COUNT_NON_ZERO_REMEDY.value,
         }
 
     # Non-final tiles must not trigger any callback.
@@ -3095,6 +3113,130 @@ def test_beamformer_flagged_count(
         finalTileBeamformerFlaggedCountOk=True,
         finalTileBeamformerFlaggedCountDetails=None,
     )
+
+    # fpga1 INVALID → unknown.
+    station_component_manager._on_tile_attribute_change(
+        last,
+        "dsp_station_beamf_discarded_or_flagged_packet_count_fpga1",
+        None,
+        tango.AttrQuality.ATTR_INVALID,
+    )
+    callbacks["component_state"].assert_call(
+        finalTileBeamformerFlaggedCountOk=None,
+        finalTileBeamformerFlaggedCountDetails={
+            "reason": HealthDetailText.FLAGGED_COUNT_INVALID_REASON.format(
+                tile_id=last, fpgas="fpga1"
+            ),
+            "remedy": HealthDetailText.FLAGGED_COUNT_INVALID_REMEDY.value,
+        },
+    )
+
+
+@pytest.mark.parametrize("device_type", ["tile", "subrack"])
+@pytest.mark.parametrize(
+    ("health_report", "health", "expected_remedy"),
+    [
+        pytest.param(
+            "temperatures_board is in ATTR_WARNING",
+            HealthState.DEGRADED,
+            HealthDetailText.SUB_DEVICE_OUT_OF_LIMITS_REMEDY,
+            id="warning",
+        ),
+        pytest.param(
+            "temperatures_board is in ATTR_ALARM",
+            HealthState.FAILED,
+            HealthDetailText.SUB_DEVICE_OUT_OF_LIMITS_REMEDY,
+            id="alarm",
+        ),
+        pytest.param(
+            # Out of limits is more useful to know than unreadable.
+            "temperatures_board is in ATTR_INVALID\n"
+            "temperatures_fpga0 is in ATTR_ALARM",
+            HealthState.FAILED,
+            HealthDetailText.SUB_DEVICE_OUT_OF_LIMITS_REMEDY,
+            id="alarm and invalid",
+        ),
+        pytest.param(
+            "temperatures_board is in ATTR_INVALID",
+            HealthState.FAILED,
+            HealthDetailText.SUB_DEVICE_UNREADABLE_REMEDY,
+            id="invalid",
+        ),
+        pytest.param(
+            "The device is not communicating",
+            HealthState.UNKNOWN,
+            HealthDetailText.SUB_DEVICE_UNREADABLE_REMEDY,
+            id="unknown health",
+        ),
+        pytest.param(
+            "Too many fans have failed",
+            HealthState.FAILED,
+            HealthDetailText.SUB_DEVICE_RULES_REMEDY,
+            id="health rules",
+        ),
+    ],
+)
+def test_sub_device_health_details(
+    station_component_manager: SpsStationComponentManager,
+    device_type: str,
+    health_report: str,
+    health: HealthState,
+    expected_remedy: HealthDetailText,
+) -> None:
+    """
+    Test the reason and remedy that the station gives for a tile or subrack.
+
+    The reason is the device's own healthReport. The remedy depends on the
+    attribute qualities that the report names, or else on its health.
+
+    :param station_component_manager: the SPS station component manager
+        under test.
+    :param device_type: "tile" or "subrack".
+    :param health_report: the device's healthReport, without values.
+    :param health: the device's health.
+    :param expected_remedy: the remedy that the station should give.
+    """
+    proxies = (
+        station_component_manager._tile_proxies
+        if device_type == "tile"
+        else station_component_manager._subrack_proxies
+    )
+    fqdn = next(iter(proxies))
+    station_component_manager._sub_device_health_reports[fqdn] = health_report
+    assert station_component_manager._sub_device_health_details(fqdn, health) == {
+        "reason": health_report,
+        "remedy": expected_remedy.format(device_type=device_type),
+    }
+
+
+@pytest.mark.parametrize("device_type", ["tile", "subrack"])
+def test_sub_device_health_details_no_report(
+    station_component_manager: SpsStationComponentManager,
+    device_type: str,
+) -> None:
+    """
+    Test the details that the station gives for a device with no healthReport.
+
+    There is no reason, so the station's generic reason is used. There is
+    a remedy.
+
+    :param station_component_manager: the SPS station component manager
+        under test.
+    :param device_type: "tile" or "subrack".
+    """
+    proxies = (
+        station_component_manager._tile_proxies
+        if device_type == "tile"
+        else station_component_manager._subrack_proxies
+    )
+    fqdn = next(iter(proxies))
+    assert station_component_manager._sub_device_health_details(
+        fqdn, HealthState.FAILED
+    ) == {
+        "remedy": HealthDetailText.SUB_DEVICE_NO_REPORT_REMEDY.format(
+            device_type=device_type
+        ),
+    }
 
 
 @pytest.mark.parametrize(

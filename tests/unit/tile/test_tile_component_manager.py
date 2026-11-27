@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import functools
 import ipaddress
 import json
 import threading
@@ -30,7 +31,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_sps_tpm_api.base.definitions import LibraryError, PluginError
+from ska_low_sps_tpm_api.base.definitions import LibraryError
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -43,9 +44,10 @@ from ska_low_mccs_spshw.tile import (
     TileSimulator,
     TpmStatus,
 )
+from ska_low_mccs_spshw.tile import utils as tile_utils
 from ska_low_mccs_spshw.tile.tile_component_manager import _select_firmware_name
 from ska_low_mccs_spshw.tile.tile_poll_management import TileLRCRequest, TileResponse
-from ska_low_mccs_spshw.tile.utils import LockTimeoutError
+from ska_low_mccs_spshw.tile.utils import LockTimeoutError, thread_run_delay_s
 from time_utils import str_from_float_epoch_utc_time
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -2552,42 +2554,39 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         Unit test for the _get_all_pointing_delays function.
 
         Covers both a TPM whose firmware/BIOS supports all 48 beams, and
-        an older TPM whose firmware only supports 8 beams and raises a
-        PluginError for higher beam indices.
+        an older TPM whose firmware only supports 8 beams.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
 
-        def _delay_for_beam(beam_index: int) -> list[list[list[float]]]:
-            return [[[float(beam_index), float(beam_index)]] * 8] * 2
+        def _all_delays(nof_beams: int = 48) -> list[list[list[list[float]]]]:
+            return [
+                [[[float(beam_index), float(beam_index)]] * 8] * 2
+                for beam_index in range(nof_beams)
+            ]
 
         # New firmware/BIOS: all 48 beams are readable.
-        mock = unittest.mock.Mock(side_effect=_delay_for_beam)
-        tile_simulator.get_pointing_delay = mock  # type: ignore[assignment]
+        mock = unittest.mock.Mock(side_effect=_all_delays)
+        tile_simulator.get_all_pointing_delays = mock  # type: ignore[assignment]
         delays = tile_component_manager._get_all_pointing_delays()
         assert delays.shape == (48, 32)
         assert not np.isnan(delays).any()
-        tile_simulator.get_pointing_delay.assert_any_call(47)
-        assert tile_simulator.get_pointing_delay.call_count == 48
+        assert tile_simulator.get_all_pointing_delays.call_count == 1
 
         # Old firmware/BIOS: only beams 0-7 are supported.
-        def _old_firmware_delay_for_beam(
-            beam_index: int,
-        ) -> list[list[list[float]]]:
-            if beam_index >= 8:
-                raise PluginError("Invalid Beam Index")
-            return _delay_for_beam(beam_index)
-
-        old_delay = unittest.mock.Mock(side_effect=_old_firmware_delay_for_beam)
-        tile_simulator.get_pointing_delay = old_delay  # type: ignore[assignment]
+        nof_beams_supported = 8
+        old_delay = unittest.mock.Mock(
+            side_effect=functools.partial(_all_delays, nof_beams_supported)
+        )
+        tile_simulator.get_all_pointing_delays = old_delay  # type: ignore[assignment]
         delays = tile_component_manager._get_all_pointing_delays()
         assert delays.shape == (48, 32)
         assert not np.isnan(delays[:8]).any()
         assert np.isnan(delays[8:]).all()
         # Should stop at the first unsupported beam, not probe all the way to 48.
-        assert tile_simulator.get_pointing_delay.call_count == 9
+        assert tile_simulator.get_all_pointing_delays.call_count == 1
 
     def test_start_beamformer(
         self: TestStaticSimulator,
@@ -4145,3 +4144,32 @@ def test_tile_simulator_routes_lmc_data_types_independently(
     tile_simulator.set_lmc_download("10g", dst_ip="lmc-daq", dst_port=4660)
     tile_simulator.send_channelised_data()
     spead_data_simulator.set_destination_ip.assert_called_with("lmc-daq", 4660)
+
+
+def test_thread_run_delay_s_reads_schedstat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test thread_run_delay_s returns a non-negative float on Linux.
+
+    :param monkeypatch: pytest monkeypatch fixture
+    """
+    monkeypatch.setattr(tile_utils, "_SCHEDSTAT_AVAILABLE", True)
+    delay = thread_run_delay_s()
+    if delay is None:
+        pytest.skip("schedstat not available on this system")
+    assert delay >= 0.0
+
+
+def test_thread_run_delay_s_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test thread_run_delay_s returns None, and stops retrying, without schedstat.
+
+    :param monkeypatch: pytest monkeypatch fixture
+    """
+    monkeypatch.setattr(tile_utils, "_SCHEDSTAT_AVAILABLE", True)
+    with unittest.mock.patch("builtins.open", side_effect=OSError) as mock_open:
+        assert thread_run_delay_s() is None
+        assert thread_run_delay_s() is None
+    # Only tried once; the failure is cached.
+    mock_open.assert_called_once()

@@ -29,6 +29,7 @@ __all__ = [
     "abort_task_on_exception",
     "HealthConfigLoader",
     "LockTimeoutError",
+    "thread_run_delay_s",
 ]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
@@ -41,6 +42,39 @@ class LockTimeoutError(TimeoutError):
     hardware): this means another thread is busy, not that the hardware
     is unreachable.
     """
+
+
+# Set False after the first failed read of schedstat, so polls on systems
+# without it (non-Linux, no /proc, schedstats disabled) don't retry every time.
+_SCHEDSTAT_AVAILABLE = True
+
+
+def thread_run_delay_s() -> float | None:
+    """
+    Return the calling thread's cumulative run-queue delay, in seconds.
+
+    This is the time the thread was runnable but waiting for a CPU, taken from
+    the second field of ``/proc/self/task/<tid>/schedstat``. Comparing two
+    readings shows how much of an interval was lost to CPU contention on the
+    node, as opposed to the thread running (CPU time) or being blocked
+    (waiting for the GIL, or on I/O).
+
+    :return: the cumulative run-queue delay in seconds, or None if it can't
+        be read on this system.
+    """
+    global _SCHEDSTAT_AVAILABLE  # pylint: disable=global-statement
+    if not _SCHEDSTAT_AVAILABLE:
+        return None
+    try:
+        with open(
+            f"/proc/self/task/{threading.get_native_id()}/schedstat",
+            encoding="ascii",
+        ) as schedstat:
+            # Fields: time on CPU (ns), time waiting on run queue (ns), timeslices
+            return int(schedstat.read().split()[1]) / 1e9
+    except (OSError, IndexError, ValueError):
+        _SCHEDSTAT_AVAILABLE = False
+        return None
 
 
 _FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
@@ -85,6 +119,7 @@ def _iterate_stack() -> Iterator[_FrameInfo]:
         frame = frame.f_back
 
 
+# pylint: disable=too-many-instance-attributes
 class LogLock:
     """A logging lock."""
 
@@ -96,6 +131,11 @@ class LogLock:
         self.last_acquired_by = ""
         self.last_acquired_context = ""
         self._timeout_warning = timeout_warning
+        # Snapshots taken when the lock is acquired, so a slow release can
+        # report where the time spent holding the lock went.
+        self._lock_wait = 0.0
+        self._cpu_at_acquire = 0.0
+        self._runq_at_acquire: float | None = None
 
     def acquire(
         self, blocking: bool = True, timeout: float = -1, context: str = ""
@@ -127,6 +167,9 @@ class LogLock:
             self.last_acquired_at = time.time()
             self.last_acquired_by = caller
             self.last_acquired_context = context
+            self._lock_wait = acquire_time
+            self._cpu_at_acquire = time.thread_time()
+            self._runq_at_acquire = thread_run_delay_s()
             # self.log.debug(
             #     f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
             # )
@@ -175,9 +218,47 @@ class LogLock:
                 f" ({self.last_acquired_context})" if self.last_acquired_context else ""
             )
             self.log.warning(
-                f"lock {self.name} held for {elapsed:.3f}s by {caller}{context}"
+                f"lock {self.name} held for {elapsed:.3f}s by {caller}{context} "
+                f"{self._timing_breakdown(elapsed)}"
             )
         self.lock.release()
+
+    def _timing_breakdown(self, elapsed: float) -> str:
+        """
+        Split the time the lock was held, to classify the cause of slowness.
+
+        Must be called from the thread holding the lock, since CPU time and
+        run-queue delay are measured per thread. The time held is split into:
+
+        * ``cpu``: time this thread was running. If this dominates, the
+          operation itself is CPU-heavy.
+        * ``runqueue``: time this thread was runnable but waiting for a CPU.
+          If this dominates, the node is short of CPU (node-level contention).
+        * ``blocked``: the rest. Time the thread was blocked, either waiting
+          for the GIL (other threads in this process were busy) or on TPM
+          network I/O. Compare against an idle single-register read to tell
+          them apart.
+
+        Large ``runqueue`` and ``blocked`` together suggest the thread holding
+        the GIL was descheduled, stalling the whole process.
+
+        :param elapsed: wall time the lock was held, in seconds.
+
+        :return: the breakdown, formatted as ``key=value`` pairs.
+        """
+        cpu = time.thread_time() - self._cpu_at_acquire
+        runq_end = thread_run_delay_s()
+        if self._runq_at_acquire is None or runq_end is None:
+            runqueue_str = "n/a"
+            blocked = elapsed - cpu
+        else:
+            runqueue = runq_end - self._runq_at_acquire
+            runqueue_str = f"{runqueue:.3f}"
+            blocked = elapsed - cpu - runqueue
+        return (
+            f"cpu={cpu:.3f} runqueue={runqueue_str} blocked={blocked:.3f} "
+            f"lock_wait={self._lock_wait:.3f}"
+        )
 
     def __enter__(self) -> bool:
         return self.acquire()

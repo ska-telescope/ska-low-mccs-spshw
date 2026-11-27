@@ -1,7 +1,10 @@
 # Version History
 
-## Unreleased
+## 18.1.0
 
+* [SKB-1579] Optimisations and logs.
+  * The "lock held for" warning, logged when the hardware lock is held for longer than half `DefaultLockTimeout`, now splits the time into CPU, run-queue (node CPU contention), blocked (GIL or TPM I/O) and lock-wait time.
+  * Bump tpm-api 5.0.1 -> 5.3.1 (<https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/-/releases/5.3.1>). Optimisation to polled methods, expect decrease CPU demand and increase speed.
 * [THORN-727] The prototype subrack powers itself on and off through the PDU ports named by its `PduTrl` and `PduPorts` properties. Without both properties it rejects `On` and `Off`.
   * `On` switches every port on, then waits up to 30 s for the PDU to report every port on.
   * `Off` first shuts the SMM down with `poweroff_subrack` and waits for it to leave the network, then switches every port off and waits up to 30 s for the PDU to report every port off. The shutdown is skipped when the ports are already off.

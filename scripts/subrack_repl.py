@@ -21,12 +21,11 @@ import code
 import logging
 import sys
 import threading
-import time
 
 from ska_low_mccs_common.component import WebHardwareClient
 
 from ska_low_mccs_spshw.prototype_subrack import (
-    BoardCommandStatus,
+    CommandOutcome,
     DerivedValues,
     Subrack,
     SubrackPoller,
@@ -98,24 +97,10 @@ def commands() -> list[str]:
     :return: the command names.
     """
     status, message, retvalue = subrack.run_board_command("list_commands", "")
-    if status is not BoardCommandStatus.COMPLETED:
+    if status is not CommandOutcome.COMPLETED:
         print(f"the board would not list its commands ({message})")
         return []
     return sorted(retvalue or [])
-
-
-def contend() -> None:
-    """
-    Run a command while a poll sweep holds the lock, and report the wait.
-
-    Reports how long the command waited, which is the remainder of the sweep
-    that was in flight. Start the simulator with ``--jitter 400`` to make each
-    sweep slow enough for the wait to be worth measuring.
-    """
-    started = time.monotonic()
-    status, message, _ = subrack.run_board_command("turn_on_tpm", "2")
-    waited = time.monotonic() - started
-    print(f"command waited {waited:.1f}s for the lock -> {status.name} {message}")
 
 
 def bye() -> None:
@@ -174,7 +159,6 @@ subrack client polling {HOST}:{PORT}
   last()     the last poll response
   wait()     block until the next poll arrives
   commands() list the commands the board accepts
-  contend()  run a command while a sweep holds the lock
   polls      every response so far
   errors     every failed poll so far
   bye()      stop early; exit() and Ctrl-D also shut down cleanly

@@ -6,17 +6,23 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-The board commands of the prototype subrack device.
+The Tango commands of the prototype subrack device.
 
-:py:class:`SubrackCommands` declares every Tango command that reaches the
-management board, and nothing else. The device mixes it in and supplies the
-subrack client the commands run through.
+:py:class:`SubrackCommands` declares every Tango command the device has. The
+device mixes it in and supplies the subrack client that the board commands run
+through, and the PDU link that ``On`` and ``Off`` run through.
 
-Each command is a long running command, because the SMB runs these
+Each board command is a long running command, because the SMB runs these
 asynchronously. The task runs on a task executor thread, and
 :py:meth:`~.subrack_client.Subrack.run_board_command` runs the whole handshake
 on that thread. So a command never waits for a poll slot. A poll that lands
 part way through a command gets ``BUSY`` from the board, and changes nothing.
+
+``On`` and ``Off`` are long running commands too. Each task switches every PDU
+port that feeds the subrack, then waits until the PDU reports every port in the
+target state. Before ``Off`` switches the ports, it shuts the SMM down with
+``poweroff_subrack``, unless the ports are already off. The device state
+follows on the next poll, because the device state changes only on a poll.
 
 The mixin inherits :py:class:`~ska_tango_base.long_running_commands.LRCMixin`,
 because the ``long_running_command`` decorator needs the task executor and the
@@ -28,28 +34,38 @@ from __future__ import annotations
 
 import importlib.resources
 import json
+import socket
 import threading
+import time
 from typing import Any, Final, Optional
 
 import ska_tango_base as stb
-from ska_control_model import AdminMode, ResultCode, TaskStatus
+from ska_control_model import AdminMode, PowerState, ResultCode, TaskStatus
 from ska_tango_base.long_running_commands import LRCMixin, LRCReqType
-from tango import Except
+from tango import DevState, Except
 
 from ..subrack.subrack_data import FanMode, SubrackData
-from .constants import ClientCommand
-from .subrack_client import BoardCommandStatus, Subrack
+from .constants import (
+    PDU_COMMAND_TIMEOUT,
+    SMM_LEAVE_NETWORK_TIMEOUT,
+    SMM_PROBE_INTERVAL,
+    SMM_SHUTDOWN_TIME,
+    ClientCommand,
+    CommandOutcome,
+)
+from .pdu_link import PduLink
+from .subrack_client import Subrack
 
 __all__ = ["SubrackCommands"]
 
 
-# The task callback status each board command outcome ends on, and the result
-# code that goes with it. Every outcome is terminal, so a command never stays
-# in lrcExecuting.
-_OUTCOMES: Final[dict[BoardCommandStatus, tuple[TaskStatus, ResultCode]]] = {
-    BoardCommandStatus.COMPLETED: (TaskStatus.COMPLETED, ResultCode.OK),
-    BoardCommandStatus.ABORTED: (TaskStatus.ABORTED, ResultCode.ABORTED),
-    BoardCommandStatus.FAILED: (TaskStatus.FAILED, ResultCode.FAILED),
+# The task callback status each command outcome ends on, and the result code
+# that goes with it. Every outcome is terminal, so a command never stays in
+# lrcExecuting.
+_OUTCOMES: Final[dict[CommandOutcome, tuple[TaskStatus, ResultCode]]] = {
+    CommandOutcome.COMPLETED: (TaskStatus.COMPLETED, ResultCode.OK),
+    CommandOutcome.ABORTED: (TaskStatus.ABORTED, ResultCode.ABORTED),
+    CommandOutcome.FAILED: (TaskStatus.FAILED, ResultCode.FAILED),
 }
 
 
@@ -72,17 +88,18 @@ def _load_schema(command_name: str) -> dict[str, Any]:
 # pylint: disable=too-many-ancestors
 class SubrackCommands(LRCMixin):
     """
-    The Tango commands of the prototype subrack device that reach the board.
+    The Tango commands of the prototype subrack device.
 
-    Mixed into the device, which supplies the subrack below. The only state
-    the mixin holds is the command schemas, which it loads in
-    :py:meth:`init_device`. A command reads the subrack the device assembled
-    rather than one it keeps.
+    Mixed into the device, which supplies the subrack and the PDU link below.
+    The only state the mixin holds is the command schemas, which it loads in
+    :py:meth:`init_device`. A command reads the subrack or the PDU link the
+    device assembled rather than one it keeps.
 
-    Every command runs one SMB command through
+    Every board command runs one SMB command through
     :py:meth:`~.subrack_client.Subrack.run_board_command`. What that returns
     maps onto a task status through ``_OUTCOMES``, so an abort reports
-    ``ABORTED`` and a board that refused reports ``FAILED``.
+    ``ABORTED`` and a board that refused reports ``FAILED``. ``On`` and ``Off``
+    report what their PDU wait returns in the same way.
     """
 
     # ----------------------------------
@@ -99,6 +116,17 @@ class SubrackCommands(LRCMixin):
             f"'subrack' property must be implemented by '{type(self).__name__}'."
         )
 
+    @property
+    def pdu_link(self: SubrackCommands) -> PduLink:
+        """
+        Return the link to the PDU that feeds the subrack.
+
+        :raises NotImplementedError: always, because the device supplies it.
+        """
+        raise NotImplementedError(
+            f"'pdu_link' property must be implemented by '{type(self).__name__}'."
+        )
+
     def wake_poller(self: SubrackCommands) -> None:
         """
         Make the next poll run now, rather than at the update rate.
@@ -111,6 +139,15 @@ class SubrackCommands(LRCMixin):
 
     _admin_mode: AdminMode
     """The admin mode, which ``BaseInterface`` stores as it is written."""
+
+    _commanded_state: Optional[DevState]
+    """The commanded state, which ``BaseInterface`` declares as a signal."""
+
+    SubrackIp: str
+    """The address of the SMM, which the device declares as a property."""
+
+    SubrackPort: int
+    """The port of the SMM web server, which the device declares as a property."""
 
     # ----------------------------------
     # Command schemas
@@ -139,11 +176,12 @@ class SubrackCommands(LRCMixin):
         self: SubrackCommands, request_type: Optional[LRCReqType] = None
     ) -> bool:
         """
-        Return whether a command that reaches the board may run now.
+        Return whether a board command may run now.
 
         Only ``ONLINE`` and ``ENGINEERING`` let the device contact the subrack.
         Every other ``adminMode`` asks it to make no contact, so a command is
-        refused there.
+        refused there. ``On`` and ``Off`` do not use this. The base class
+        refuses them in ``DISABLE``.
 
         ``adminMode`` is read rather than the state, because the device
         reaches ``DISABLE`` only after the last poll reports back. A command
@@ -331,6 +369,31 @@ class SubrackCommands(LRCMixin):
         )
 
     # ----------------------------------
+    # Power commands
+    # ----------------------------------
+    @stb.long_running_commands.submit_lrc_task
+    def execute_On(
+        self: SubrackCommands,
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Switch on every PDU port that feeds the subrack.
+
+        :return: the task that switches the ports.
+        """
+        return self._power_task(PowerState.ON)
+
+    @stb.long_running_commands.submit_lrc_task
+    def execute_Off(
+        self: SubrackCommands,
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Shut the SMM down, then switch off every PDU port that feeds the subrack.
+
+        :return: the task that shuts the SMM down and switches the ports.
+        """
+        return self._power_task(PowerState.OFF)
+
+    # ----------------------------------
     # Commands this device refuses
     # ----------------------------------
     def execute_Standby(
@@ -410,7 +473,7 @@ class SubrackCommands(LRCMixin):
     @staticmethod
     def _report_outcome(
         task_callback: stb.type_hints.TaskCallbackType,
-        outcome: BoardCommandStatus,
+        outcome: CommandOutcome,
         message: str,
     ) -> None:
         """
@@ -425,3 +488,133 @@ class SubrackCommands(LRCMixin):
         """
         (status, result_code) = _OUTCOMES[outcome]
         task_callback(status=status, result=(result_code, message))
+
+    # ----------------------------------
+    # Switching the PDU ports
+    # ----------------------------------
+    def _power_task(
+        self: SubrackCommands, target: PowerState
+    ) -> stb.type_hints.TaskFunctionType:
+        """
+        Build the task that switches the PDU ports and waits for them.
+
+        The link is read here, in the task factory, which runs before the
+        command is submitted. So a device with no PDU rejects the command
+        rather than accepting it and then failing it.
+
+        :param target: the power state to switch the ports to.
+
+        :return: the task that switches the ports.
+        """
+        pdu_link = self.pdu_link
+        on = target == PowerState.ON
+        # Off shuts the SMM down first, so the PDU does not cut power to a
+        # running board.
+        subrack = None if on else self.subrack
+
+        def task(
+            task_callback: stb.type_hints.TaskCallbackType,
+            task_abort_event: threading.Event,
+        ) -> None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+            self._commanded_state = DevState.ON if on else DevState.OFF
+            if subrack is not None and pdu_link.power_state != PowerState.OFF:
+                if not self._shut_down_smm(subrack, task_abort_event):
+                    self._report_outcome(
+                        task_callback,
+                        CommandOutcome.ABORTED,
+                        "The command was aborted before the PDU ports switched off.",
+                    )
+                    return
+            self.logger.info(f"Switching the PDU ports {target.name}...")
+            (result_code, message) = pdu_link.set_ports(on)
+            if result_code != ResultCode.OK:
+                message = f"Could not switch the PDU ports {target.name}. {message}"
+                self.logger.error(message)
+                task_callback(
+                    status=TaskStatus.FAILED, result=(ResultCode.FAILED, message)
+                )
+                return
+
+            (outcome, message) = pdu_link.wait_for(
+                target, PDU_COMMAND_TIMEOUT, abort_event=task_abort_event
+            )
+            self._report_outcome(task_callback, outcome, message)
+            self.logger.info(message)
+
+        return task
+
+    def _shut_down_smm(
+        self: SubrackCommands, subrack: Subrack, abort_event: threading.Event
+    ) -> bool:
+        """
+        Shut the SMM down, then wait for the shutdown to finish.
+
+        ``poweroff_subrack`` switches off the TPMs, the backplane and the fans,
+        and then shuts down the SMM. The PSUs stay on, because the PDU ports
+        switch off next, and a PSU that the SMM switched off needs a slow power
+        cycle to come back. The board answers before it shuts down. This then
+        waits for the SMM to leave the network, and then waits
+        ``SMM_SHUTDOWN_TIME`` more for the rest of the shutdown.
+
+        A board that does not accept the command is logged, and the ports
+        still switch off. So ``Off`` removes power from a board that has
+        stopped answering.
+
+        :param subrack: the client to send the command through.
+        :param abort_event: an event that requests an abort when set.
+
+        :return: false if the command was aborted, otherwise true.
+        """
+        self.logger.info("Shutting the SMM down before the PDU ports switch off...")
+        (outcome, message, _) = subrack.run_board_command(
+            ClientCommand.POWEROFF_SUBRACK.value, "false", abort_event=abort_event
+        )
+        if outcome == CommandOutcome.ABORTED:
+            return False
+        if outcome == CommandOutcome.FAILED:
+            self.logger.warning(
+                "The SMM did not accept poweroff_subrack, so the PDU ports switch "
+                f"off without a shutdown. {message}"
+            )
+            return True
+        if not self._wait_for_smm_to_leave_network(abort_event):
+            return False
+        return not abort_event.wait(SMM_SHUTDOWN_TIME)
+
+    def _wait_for_smm_to_leave_network(
+        self: SubrackCommands, abort_event: threading.Event
+    ) -> bool:
+        """
+        Wait until the SMM stops answering on the network.
+
+        Each probe opens a TCP connection to the SMM web server. A refused
+        connection means that the web server has stopped but the SMM network is
+        still up, so the wait goes on. Any other error, such as a timeout or no
+        route to the SMM, means that the SMM network is down.
+
+        An SMM that still answers after ``SMM_LEAVE_NETWORK_TIMEOUT`` is logged,
+        and the ports still switch off.
+
+        :param abort_event: an event that requests an abort when set.
+
+        :return: false if the command was aborted, otherwise true.
+        """
+        address = (self.SubrackIp, self.SubrackPort)
+        deadline = time.monotonic() + SMM_LEAVE_NETWORK_TIMEOUT
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection(address, timeout=SMM_PROBE_INTERVAL):
+                    pass
+            except ConnectionRefusedError:
+                pass
+            except OSError as error:
+                self.logger.info(f"The SMM has left the network. {error!r}")
+                return True
+            if abort_event.wait(SMM_PROBE_INTERVAL):
+                return False
+        self.logger.warning(
+            f"The SMM still answers after {SMM_LEAVE_NETWORK_TIMEOUT}s, so the PDU "
+            "ports switch off anyway."
+        )
+        return True

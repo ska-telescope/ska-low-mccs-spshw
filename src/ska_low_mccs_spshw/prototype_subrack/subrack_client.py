@@ -19,6 +19,7 @@ command runs it answers every other request with ``BUSY``. A poll ignores a
 busy answer, so a value the board would not read keeps its last value. A board
 command runs on the thread that calls it, so it does not wait for a poll slot.
 """
+
 from __future__ import annotations
 
 import logging

@@ -136,7 +136,7 @@ class TestAgainstSimulator:
         """
         _next_poll(responses)
 
-        (status, message, _) = simulated_subrack.run_board_command("turn_on_tpm", "5")
+        status, message, _ = simulated_subrack.run_board_command("turn_on_tpm", "5")
         assert status == CommandOutcome.COMPLETED, message
 
         # Polling must survive the command.
@@ -287,7 +287,6 @@ class TestHealthRead:
             ),
         ],
     )
-    # pylint: disable-next=too-many-arguments
     def test_a_transport_failure_fails_the_whole_poll(
         self: TestHealthRead,
         faked_subrack: Subrack,
@@ -365,7 +364,6 @@ class TestErrorBranches:
             ),
         ],
     )
-    # pylint: disable-next=too-many-arguments
     def test_a_transport_failure_raises_the_matching_exception(
         self: TestErrorBranches,
         faked_subrack: Subrack,
@@ -498,7 +496,7 @@ class TestErrorBranches:
             },
         )
 
-        (status_out, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
+        status_out, message, _ = faked_subrack.run_board_command("turn_on_tpm", "1")
 
         assert status_out == CommandOutcome.FAILED
         assert "did not accept" in message
@@ -527,7 +525,7 @@ class TestErrorBranches:
             },
         )
 
-        (status, message, _) = faked_subrack.run_board_command("turn_on_tpm", "1")
+        status, message, _ = faked_subrack.run_board_command("turn_on_tpm", "1")
 
         assert status == CommandOutcome.FAILED
         assert "Connection refused" in message
@@ -565,9 +563,7 @@ class TestErrorBranches:
         abort_event = threading.Event()
         abort_event.set()
 
-        (status, _, _) = faked_subrack.run_board_command(
-            "turn_on_tpms", "", abort_event
-        )
+        status, _, _ = faked_subrack.run_board_command("turn_on_tpms", "", abort_event)
 
         assert status == CommandOutcome.ABORTED
 
@@ -647,9 +643,7 @@ class TestErrorBranches:
         }
         fake_client.set_command_responses("command_completed", busy, busy, done)
 
-        (result, message, _) = faked_subrack.run_board_command(
-            "turn_on_tpms", "", abort
-        )
+        result, message, _ = faked_subrack.run_board_command("turn_on_tpms", "", abort)
 
         assert result == CommandOutcome.COMPLETED, message
         completions = [
@@ -681,7 +675,6 @@ class TestErrorBranches:
             (HardwareClientResponseStatusCodes.OK.name, True, ""),
         ],
     )
-    # pylint: disable-next=too-many-arguments
     def test_an_error_while_awaiting_completion_fails_with_its_details(
         self: TestErrorBranches,
         faked_subrack: Subrack,
@@ -730,9 +723,7 @@ class TestErrorBranches:
             },
         )
 
-        (result, message, _) = faked_subrack.run_board_command(
-            "turn_on_tpms", "", abort
-        )
+        result, message, _ = faked_subrack.run_board_command("turn_on_tpms", "", abort)
 
         assert result == CommandOutcome.FAILED
         assert (info or "No details.") in message, message
@@ -852,7 +843,7 @@ class TestWakingThePoller:
 
         :param logger: a logger.
         """
-        (poller, polls) = self._build_poller(logger)
+        poller, polls = self._build_poller(logger)
         try:
             poller.start_polling()
             _next_response(polls)
@@ -928,7 +919,6 @@ class TestTheBiosVersion:
         [("v1.6.0", True), ("v1.8.0", False)],
         ids=["1.6.0", "1.8.0"],
     )
-    # pylint: disable-next=too-many-arguments
     def test_the_board_info_decides_whether_tpm_currents_are_read(
         self: TestTheBiosVersion,
         fake_client: FakeHardwareClient,
@@ -1036,7 +1026,7 @@ class TestTheBiosVersion:
                 )
             assert "tpm_currents" not in subrack.get_request()
 
-            (status, message, _) = subrack.run_board_command("turn_on_tpm", "5")
+            status, message, _ = subrack.run_board_command("turn_on_tpm", "5")
             assert status == CommandOutcome.COMPLETED, message
 
 
@@ -1158,9 +1148,7 @@ class TestCommandsThatDoNotRunToPlan:
             },
         )
 
-        (result, message, value) = faked_subrack.run_board_command(
-            "set_fan_mode", "1,1"
-        )
+        result, message, value = faked_subrack.run_board_command("set_fan_mode", "1,1")
 
         assert result == CommandOutcome.COMPLETED, message
         assert value == "1", "the caller should get what the board returned"
@@ -1206,7 +1194,7 @@ class TestCommandsThatDoNotRunToPlan:
         abort_event = threading.Event()
         abort_event.set()
 
-        (result, _, _) = subrack.run_board_command("turn_on_tpms", "", abort_event)
+        result, _, _ = subrack.run_board_command("turn_on_tpms", "", abort_event)
 
         assert result == CommandOutcome.ABORTED, "the command is abandoned anyway"
         complaining.error.assert_called_once()
@@ -1248,9 +1236,7 @@ class TestCommandsThatDoNotRunToPlan:
         done = dict(not_yet, retvalue=True)
         fake_client.set_command_responses("command_completed", not_yet, done)
 
-        (result, message, _) = faked_subrack.run_board_command(
-            "turn_on_tpms", "", abort
-        )
+        result, message, _ = faked_subrack.run_board_command("turn_on_tpms", "", abort)
 
         assert result == CommandOutcome.COMPLETED, message
         completions = [
@@ -1296,9 +1282,7 @@ class TestCommandsThatDoNotRunToPlan:
         abort = mock.Mock()
         abort.wait.side_effect = [False, False, False]
 
-        (result, message, _) = faked_subrack.run_board_command(
-            "turn_on_tpms", "", abort
-        )
+        result, message, _ = faked_subrack.run_board_command("turn_on_tpms", "", abort)
 
         assert result == CommandOutcome.FAILED
         assert "Timed out" in message, message

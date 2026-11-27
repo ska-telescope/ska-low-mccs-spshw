@@ -70,8 +70,7 @@ class PowerMarshaller(MccsBaseDevice):
             version_info = f"{self.__class__.__name__}, {self._build_state}"
             self.logger.info("\n%s\n%s\n%s", version_info, version, properties)
 
-        # pylint: disable=broad-exception-caught
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self.logger.error("Initialise failed: Incomplete server: %s", repr(ex))
 
     def delete_device(self: PowerMarshaller) -> None:
@@ -79,8 +78,7 @@ class PowerMarshaller(MccsBaseDevice):
         try:
             self.logger.info("Deleting device")
             self.component_manager.stop_communicating()
-        # pylint: disable=broad-exception-caught
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self.logger.error("Failed to delete device %s", repr(ex))
         super().delete_device()
 

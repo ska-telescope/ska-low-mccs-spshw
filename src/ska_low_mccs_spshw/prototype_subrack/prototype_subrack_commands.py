@@ -30,6 +30,7 @@ command tracker that mixin supplies. Stating that here rather than in the
 device is what lets the device inherit the command surface and its machinery
 together.
 """
+
 from __future__ import annotations
 
 import importlib.resources
@@ -456,7 +457,7 @@ class SubrackCommands(LRCMixin):
             self.logger.info(
                 f"Running board command {name.value} with args '{args}'..."
             )
-            (outcome, message, _) = subrack.run_board_command(
+            outcome, message, _ = subrack.run_board_command(
                 name.value, args, abort_event=task_abort_event
             )
             # The command can change what the board reports, such as the TPM
@@ -486,7 +487,7 @@ class SubrackCommands(LRCMixin):
         :param outcome: what became of the board command.
         :param message: what the subrack client said about it.
         """
-        (status, result_code) = _OUTCOMES[outcome]
+        status, result_code = _OUTCOMES[outcome]
         task_callback(status=status, result=(result_code, message))
 
     # ----------------------------------
@@ -527,7 +528,7 @@ class SubrackCommands(LRCMixin):
                     )
                     return
             self.logger.info(f"Switching the PDU ports {target.name}...")
-            (result_code, message) = pdu_link.set_ports(on)
+            result_code, message = pdu_link.set_ports(on)
             if result_code != ResultCode.OK:
                 message = f"Could not switch the PDU ports {target.name}. {message}"
                 self.logger.error(message)
@@ -536,7 +537,7 @@ class SubrackCommands(LRCMixin):
                 )
                 return
 
-            (outcome, message) = pdu_link.wait_for(
+            outcome, message = pdu_link.wait_for(
                 target, PDU_COMMAND_TIMEOUT, abort_event=task_abort_event
             )
             self._report_outcome(task_callback, outcome, message)
@@ -567,7 +568,7 @@ class SubrackCommands(LRCMixin):
         :return: false if the command was aborted, otherwise true.
         """
         self.logger.info("Shutting the SMM down before the PDU ports switch off...")
-        (outcome, message, _) = subrack.run_board_command(
+        outcome, message, _ = subrack.run_board_command(
             ClientCommand.POWEROFF_SUBRACK.value, "false", abort_event=abort_event
         )
         if outcome == CommandOutcome.ABORTED:

@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A file to store health transition rules for subrack."""
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -144,7 +145,6 @@ class SubrackHealthRules(HealthRules):
 
         return has_failed, report
 
-    # pylint: disable=too-many-arguments
     def _check_voltage_drops(
         self: SubrackHealthRules,
         old_tpm_volts: list[float],

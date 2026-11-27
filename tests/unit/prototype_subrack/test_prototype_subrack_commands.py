@@ -637,7 +637,7 @@ def test_a_command_the_subrack_cannot_do_is_rejected(
     :param subrack: the mocked subrack client.
     :param command: the name of the command to invoke.
     """
-    ([result_code], [message]) = online_device.command_inout(command)
+    [result_code], [message] = online_device.command_inout(command)
 
     assert result_code == ResultCode.REJECTED
     assert message

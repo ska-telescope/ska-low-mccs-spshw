@@ -12,7 +12,6 @@ It includes an operational Tango device, a demonstrator Tango device,
 modules for driving and simulating TPM hardware, and a CLI.
 """
 
-
 __all__ = [
     "TileData",
     "TileTime",

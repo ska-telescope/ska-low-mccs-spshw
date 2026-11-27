@@ -263,12 +263,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_udp_interface_bip_error_count_fpga1_signal: AttrSignal[list[int]] = AttrSignal[
         list[int]
     ]()
-    io_udp_interface_decode_error_count_fpga0_signal: AttrSignal[
-        list[int]
-    ] = AttrSignal[list[int]]()
-    io_udp_interface_decode_error_count_fpga1_signal: AttrSignal[
-        list[int]
-    ] = AttrSignal[list[int]]()
+    io_udp_interface_decode_error_count_fpga0_signal: AttrSignal[list[int]] = (
+        AttrSignal[list[int]]()
+    )
+    io_udp_interface_decode_error_count_fpga1_signal: AttrSignal[list[int]] = (
+        AttrSignal[list[int]]()
+    )
     io_udp_interface_linkup_loss_count_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_udp_interface_linkup_loss_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_data_router_status_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
@@ -286,12 +286,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     io_jesd_interface_resync_count_fpga0_signal: AttrSignal[int] = AttrSignal[int]()
     io_jesd_interface_resync_count_fpga1_signal: AttrSignal[int] = AttrSignal[int]()
     io_jesd_interface_link_status_signal: AttrSignal[bool] = AttrSignal[bool]()
-    io_jesd_interface_lane_error_count_fpga0_signal: AttrSignal[
-        list[list]
-    ] = AttrSignal[list[list]]()
-    io_jesd_interface_lane_error_count_fpga1_signal: AttrSignal[
-        list[list]
-    ] = AttrSignal[list[list]]()
+    io_jesd_interface_lane_error_count_fpga0_signal: AttrSignal[list[list]] = (
+        AttrSignal[list[list]]()
+    )
+    io_jesd_interface_lane_error_count_fpga1_signal: AttrSignal[list[list]] = (
+        AttrSignal[list[list]]()
+    )
     timing_clock_managers_fpga0_count_signal: AttrSignal[list[int]] = AttrSignal[
         list[int]
     ]()
@@ -1641,6 +1641,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 self.logger.warning("Attribute name '%s' unrecognised.", attribute_name)
 
     # TODO: Upstream this interface change to SKABaseDevice
+    # pylint: disable=too-many-branches
     # pylint: disable-next=arguments-differ
     def _component_state_changed(  # type: ignore[override]
         self: MccsTile,

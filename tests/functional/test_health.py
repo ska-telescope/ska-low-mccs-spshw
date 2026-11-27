@@ -784,7 +784,7 @@ def read_all_tile_attributes(
 
 @then("a value is returned for each")
 def check_attribute_read_success(
-    attribute_read_info: dict[tuple[str, str], Any]
+    attribute_read_info: dict[tuple[str, str], Any],
 ) -> None:
     """
     Assert that all attribute reads were successful.

@@ -7,7 +7,6 @@
 # See LICENSE for more info.
 """This module implements a FirmwareThresholds dataclass and an interface to db."""
 
-
 from __future__ import annotations
 
 import logging

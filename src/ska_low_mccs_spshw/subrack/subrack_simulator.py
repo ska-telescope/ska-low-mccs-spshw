@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A simple subrack simulator."""
+
 from __future__ import annotations
 
 import copy
@@ -443,7 +444,7 @@ class SubrackSimulator(SubrackProtocol):
             self._aborted_event.set()
 
     def _set_subrack_fan_speed(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, speed_str) = arg.split(",")
+        fan_str, speed_str = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
         # On hardware we observe that when we change either fan 1 or fan 2
@@ -456,7 +457,7 @@ class SubrackSimulator(SubrackProtocol):
             self._attribute_values["subrack_fan_speeds_percent"][3] = speed
 
     def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, mode_str) = arg.split(",")
+        fan_str, mode_str = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         mode = int(mode_str)  # FanMode[mode_str]
         # On hardware we observe that when we change either fan 1 or fan 2
@@ -469,7 +470,7 @@ class SubrackSimulator(SubrackProtocol):
             self._attribute_values["subrack_fan_mode"][3] = mode
 
     def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
-        (fan_str, speed_str) = arg.split(",")
+        fan_str, speed_str = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
         self._attribute_values["power_supply_fan_speeds"][fan_index] = speed

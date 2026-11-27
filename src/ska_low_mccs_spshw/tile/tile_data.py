@@ -7,7 +7,6 @@
 # See LICENSE for more info.
 """This module contains base data/facts about a tile."""
 
-
 from __future__ import annotations  # allow forward references in type hints
 
 import copy

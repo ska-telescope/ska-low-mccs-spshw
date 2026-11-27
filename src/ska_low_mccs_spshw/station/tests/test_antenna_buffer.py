@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """ATest the data transmission from the antenna_buffer to the DAQ."""
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,6 @@ from .data_handlers import AntennaBufferDataHandler
 __all__ = ["TestAntennaBuffer"]
 
 
-# pylint: disable=too-many-arguments
 class TestAntennaBuffer(BaseDaqTest):
     """
     Test we can read data from the Antenna Buffer to the DAQ correctly.

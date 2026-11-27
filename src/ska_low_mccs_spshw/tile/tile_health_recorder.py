@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements a class for recording intermediate healths for MccsTile."""
+
 from logging import Logger
 from typing import Callable
 
@@ -16,6 +17,7 @@ from ska_low_mccs_common import HealthRecorder
 class TileHealthRecorder(HealthRecorder):
     """This class manages health recording for MccsTile."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         trl: str,

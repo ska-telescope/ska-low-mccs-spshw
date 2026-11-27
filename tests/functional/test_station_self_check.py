@@ -11,6 +11,7 @@ This file contains a test for the SpsStation.SelfCheck() method.
 Every self-check test must pass. The only exceptions are the tests in
 EXPECTED_NOT_RUN_TESTS, which always report NOT_RUN.
 """
+
 from __future__ import annotations
 
 import enum

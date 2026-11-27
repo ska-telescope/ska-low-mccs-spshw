@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests for the TileHealthRules."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -55,7 +56,7 @@ class TestTileHealthRules:
             ),
         ],
     )
-    def test_compute_intermediate_state(  # pylint: disable=too-many-arguments
+    def test_compute_intermediate_state(
         self: TestTileHealthRules,
         health_rules: TileHealthRules,
         min_max: dict[str, Any],

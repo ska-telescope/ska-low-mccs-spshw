@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This file contains a test for setting of firmware thresholds."""
+
 from __future__ import annotations
 
 import json
@@ -364,7 +365,7 @@ def check_spsstation_state(
 
 @given("we reached into the database and altered a threshold")
 def database_threshold_altered(
-    device_threshold_updated: Generator[None, None, None]
+    device_threshold_updated: Generator[None, None, None],
 ) -> None:
     """
     Alter the database thresholds.

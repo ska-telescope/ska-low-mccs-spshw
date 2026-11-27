@@ -12,6 +12,7 @@ The device talks real SNMP to a simulator that serves data recorded from a real
 PDU. So these tests also check the device definition. An attribute whose OID
 the real PDU does not serve reads ``None``.
 """
+
 from __future__ import annotations
 
 import gc
@@ -80,7 +81,7 @@ def pdu_device_fixture(
 
     :yields: a proxy to the PDU device.
     """
-    (host, port) = simulator.address
+    host, port = simulator.address
     harness = SpsTangoTestHarness()
     harness.add_pdu_device(
         "ENLOGIC", host, "private", port=port, update_rate=UPDATE_RATE

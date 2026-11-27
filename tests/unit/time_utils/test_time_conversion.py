@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """Tests for time conversion functions."""
+
 import pytest
 
 from ska_low_mccs_spshw.time_utils.time_conversion import (

@@ -21,6 +21,7 @@ from the TPM powers and voltages when the caller asks.
 This module holds no HTTP code and reads no status codes. It works on a
 dictionary of poll values.
 """
+
 from __future__ import annotations
 
 import logging
@@ -56,7 +57,7 @@ class DerivedValues:
     lock.
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self: DerivedValues,
         logger: logging.Logger,
         max_fan_errors: int = 5,

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of a health model for a station."""
+
 from __future__ import annotations
 
 from typing import Optional, Sequence
@@ -21,7 +22,6 @@ __all__ = ["SpsStationHealthModel"]
 class SpsStationHealthModel(BaseHealthModel):
     """A health model for a Sps station."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: SpsStationHealthModel,
         subrack_fqdns: Sequence[str],

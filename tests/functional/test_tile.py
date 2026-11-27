@@ -303,9 +303,7 @@ def check_spsstation_state(
         for tile in station_tiles
     ):
         if iters >= 60:
-            pytest.fail(
-                "Not all tiles came ON: "
-                f"""{[
+            pytest.fail("Not all tiles came ON: " f"""{[
                     (
                         tile.dev_name(),
                         tile.state(),
@@ -314,8 +312,7 @@ def check_spsstation_state(
                         tile.lrcfinished
                     )
                     for tile in station_tiles
-                ]}"""
-            )
+                ]}""")
         time.sleep(1)
         iters += 1
 

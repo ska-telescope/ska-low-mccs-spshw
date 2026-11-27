@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """This module provides a flexible test harness for testing Tango devices."""
+
 from __future__ import annotations
 
 import time
@@ -415,7 +416,7 @@ class SpsTangoTestHarness:
                 return context[server_id][1]
 
         else:
-            (host, port) = address
+            host, port = address
 
         optional_properties = {}
         if define_parent_trl:
@@ -498,7 +499,7 @@ class SpsTangoTestHarness:
                 return context[server_id][1]
 
         else:
-            (host, port) = address
+            host, port = address
 
         optional_properties: dict[str, Any] = {}
         if define_parent_trl:

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests for the TileRequestProvider."""
+
 from __future__ import annotations
 
 import unittest
@@ -128,7 +129,6 @@ class TestRequestProvider:
                     == request_2
                 )
 
-    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         "starting_tpm_status",
         TpmStatus,

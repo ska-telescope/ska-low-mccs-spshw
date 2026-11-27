@@ -1195,7 +1195,7 @@ def test_init_reclaims_the_poller_and_builds_another(
     online_device.Init()
 
     assert len(pollers) == 2, "Init did not build a second poller"
-    (first, second) = pollers
+    first, second = pollers
 
     first.kill_polling_thread.assert_called_once_with()
     second.kill_polling_thread.assert_not_called()
@@ -1214,7 +1214,7 @@ def test_init_reclaims_the_poller_and_builds_another(
     health_recorders[1].cleanup.assert_not_called()
 
     assert len(callback_schedulers) == 2, "Init did not build a second scheduler"
-    (first_scheduler, second_scheduler) = callback_schedulers
+    first_scheduler, second_scheduler = callback_schedulers
     first_scheduler.shutdown.assert_called_once_with()
     second_scheduler.shutdown.assert_not_called()
 

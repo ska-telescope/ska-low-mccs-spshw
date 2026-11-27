@@ -14,6 +14,7 @@ Without it they start a PDU simulator and a PDU device to talk to it.
 A scenario that switches a port runs only against a simulated PDU. It skips
 against a real one, because a real PDU powers real equipment.
 """
+
 from __future__ import annotations
 
 from typing import Iterator

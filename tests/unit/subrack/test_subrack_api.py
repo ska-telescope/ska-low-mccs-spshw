@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """Tests of the SubrackApi."""
+
 from unittest.mock import Mock
 
 import fastapi

@@ -906,6 +906,7 @@ class _ProgrammingStateAccess:
         """
         return obj._tile_device.tileProgrammingState
 
+    # pylint: disable=too-many-branches
     def __set__(self: _ProgrammingStateAccess, obj: TileWrapper, value: Any) -> None:
         """
         Set method.
@@ -1548,7 +1549,6 @@ class LRCManager:
                 f" value: {lrc_values['name']}"
             )
 
-    # pylint: disable = too-many-arguments
     def assert_command_finished(
         self,
         status: str | None = None,

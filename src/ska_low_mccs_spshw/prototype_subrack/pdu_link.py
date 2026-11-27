@@ -15,6 +15,7 @@ to ``MccsPdu``.
 The link changes no device state. The device reads the port states on each
 poll, so the device state still changes only on the poll thread.
 """
+
 from __future__ import annotations
 
 import functools
@@ -169,7 +170,7 @@ class PduLink:
             self._pdu_trl, "pduPortOn" if on else "pduPortOff", self._logger
         )
         for port in self._port_states:
-            (result_code, message) = command(port, is_lrc=False)
+            result_code, message = command(port, is_lrc=False)
             if result_code != ResultCode.OK:
                 return (result_code, message)
         return (ResultCode.OK, f"The PDU accepted every port {'on' if on else 'off'}.")

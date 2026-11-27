@@ -445,6 +445,7 @@ class TileComponentManager(
         self.logger.info(f"Request {command_name} QUEUED.")
         return ([ResultCode.QUEUED], ["Task staged"])
 
+    # pylint: disable=too-many-branches
     def get_request(  # type: ignore[override]
         self: TileComponentManager,
     ) -> Optional[TileRequest | TileLRCRequest]:
@@ -1934,8 +1935,7 @@ class TileComponentManager(
                     raise_exception=True,
                 ):
                     started = self._is_acquisition_started()
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
             return started
 
@@ -2219,8 +2219,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     self._firmware_list = list(self.tile.get_firmware_list())
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -2250,8 +2249,7 @@ class TileComponentManager(
                 for reg in regmap:
                     if isinstance(reg, RegisterInfo):
                         reglist.append(reg.name)
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
             return reglist
 
@@ -2304,8 +2302,7 @@ class TileComponentManager(
                         self.tile.get_fpga_time(Device.FPGA_1),
                         self.tile.get_fpga_time(Device.FPGA_2),
                     ]
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -2400,8 +2397,7 @@ class TileComponentManager(
                         )
                     )
 
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -2491,8 +2487,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     self.tile.set_spead_format(hw_spead_format)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -2703,7 +2698,6 @@ class TileComponentManager(
                 task_callback(
                     status=TaskStatus.FAILED, result="Read antenna buffer task failed"
                 )
-            return
 
     @check_communicating
     def stop_antenna_buffer(self: TileComponentManager) -> bool:
@@ -2827,8 +2821,7 @@ class TileComponentManager(
                     gateway_ip_40g=gateway_40g,
                 )
                 self.integrated_data_transmission_mode = mode
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
@@ -2852,8 +2845,7 @@ class TileComponentManager(
                 time.sleep(0.2)
                 self._pending_data_requests = self.tile.check_pending_data_requests()
 
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
@@ -2880,8 +2872,7 @@ class TileComponentManager(
                 self.data_transmission_mode = "Not transmitting"
                 time.sleep(0.2)
                 self._pending_data_requests = self.tile.check_pending_data_requests()
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
@@ -3151,8 +3142,7 @@ class TileComponentManager(
                 self.tile.configure_integrated_beam_data(
                     integration_time, first_channel, last_channel
                 )
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
@@ -3190,8 +3180,7 @@ class TileComponentManager(
                 self.tile.configure_integrated_channel_data(
                     integration_time, first_channel, last_channel
                 )
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
@@ -3391,8 +3380,7 @@ class TileComponentManager(
         ):
             try:
                 self.tile.load_pointing_delay(load_frame)
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
                 return (
                     [ResultCode.FAILED],
@@ -3442,8 +3430,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     self.tile.set_pointing_delay(delay_array, beam_index)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -3487,8 +3474,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     self.tile.switch_calibration_bank(switch_time=load_frame)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     return (
                         [ResultCode.FAILED],
                         [f"TileComponentManager: Tile access failed: {e}"],
@@ -3534,8 +3520,7 @@ class TileComponentManager(
                     self.tile.load_calibration_coefficients(
                         antenna, calibration_coefficients
                     )
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     return (
                         [ResultCode.FAILED],
                         [f"TileComponentManager: Tile access failed: {e}"],
@@ -3576,8 +3561,7 @@ class TileComponentManager(
                 self.tile.load_calibration_coefficients_for_channels(
                     start_channel, coeffs_array
                 )
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 return (
                     [ResultCode.FAILED],
                     [f"TileComponentManager: Tile access failed: {e}"],
@@ -3678,8 +3662,7 @@ class TileComponentManager(
                         ref_epoch=self._fpga_reference_time,
                         ska_spead_header_format=self._csp_spead_format == "SKA",
                     )
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -3750,8 +3733,7 @@ class TileComponentManager(
                     delays.append(
                         (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
                     )
-            # pylint: disable=broad-except
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
         return delays
 
@@ -3991,8 +3973,7 @@ class TileComponentManager(
                     )
                     # Readback the 40G configuration.
                     forty_gb_cores = self.get_40g_configuration(-1, 0)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -4040,8 +4021,7 @@ class TileComponentManager(
             if acquired:
                 try:
                     self.tile.write_address(current_address, values)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(f"TileComponentManager: Tile access failed {e}")
                     return (
                         [ResultCode.FAILED],
@@ -4079,8 +4059,7 @@ class TileComponentManager(
                         )
                         return []
                     value = self.tile.read_register(register_name)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -4128,8 +4107,7 @@ class TileComponentManager(
                         )
 
                     self.tile.write_register(register_name, values)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -4168,8 +4146,7 @@ class TileComponentManager(
                 )
                 try:
                     values = self.tile.read_address(current_address, nvalues)
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )
@@ -4485,8 +4462,7 @@ class TileComponentManager(
                     self.tile["fpga1.test_generator.control.load_dds0"] = 1
                     self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
-                # pylint: disable=broad-except
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"TileComponentManager: Tile access failed: {e}"
                     )

@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements component management for subracks."""
+
 from __future__ import annotations
 
 import functools
@@ -396,9 +397,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             self.proxy_map[pdu_trl] = self.pdu_proxy
         if self.power_marshaller_proxy is not None:
             self.proxy_map[self.power_marshaller_trl] = self.power_marshaller_proxy
-        self._upstream_communication_states: dict[
-            str, CommunicationStatus
-        ] = dict.fromkeys(self.proxy_map, CommunicationStatus.DISABLED)
+        self._upstream_communication_states: dict[str, CommunicationStatus] = (
+            dict.fromkeys(self.proxy_map, CommunicationStatus.DISABLED)
+        )
 
         # TODO: This CommunicationManager does not play well with the
         # ComponentManagerWithUpstreamPowerSupply.

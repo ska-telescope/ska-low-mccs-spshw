@@ -1219,7 +1219,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.write_register(register, write_values)
         assert tile_component_manager.read_register(register) == expected_read
 
-    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         "write_address",
         [
@@ -1828,9 +1827,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # Assert values have been updated.
         assert tile_component_manager.pps_delay == tile_simulator._pps_delay
@@ -2478,7 +2477,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         tile_component_manager.load_calibration_coefficients_for_channels(3, cal_coefs)
 
-    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         "delay_array, beam_index, expected_delay",
         [

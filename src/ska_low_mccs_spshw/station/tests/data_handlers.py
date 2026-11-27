@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements data handlers for the test data received."""
+
 from __future__ import annotations
 
 import abc

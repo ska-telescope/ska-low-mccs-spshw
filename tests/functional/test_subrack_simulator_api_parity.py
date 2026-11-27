@@ -18,6 +18,7 @@ They are deselected unless pytest is given a target with
 subrack, is described in the developer guide, on the subrack simulator
 page (docs/src/guide/developer/subrack_simulator.rst).
 """
+
 from __future__ import annotations
 
 import fcntl

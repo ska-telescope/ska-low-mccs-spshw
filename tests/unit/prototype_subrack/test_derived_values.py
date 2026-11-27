@@ -423,7 +423,7 @@ class TestDerivedValues:  # pylint: disable=too-many-public-methods
 
         self._derived(logger).apply(values, derive_tpm_currents=True)
 
-        (current, no_power, no_voltage, unpowered) = values["tpm_currents"]
+        current, no_power, no_voltage, unpowered = values["tpm_currents"]
         assert current == pytest.approx(2.0)
         assert math.isnan(no_power)
         assert math.isnan(no_voltage)

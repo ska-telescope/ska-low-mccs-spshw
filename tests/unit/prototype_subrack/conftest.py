@@ -295,8 +295,8 @@ def simulated_subrack_fixture(
 
     :yields: a subrack client.
     """
-    (host, port) = simulator_address
-    (data_callback, error_callback) = callbacks
+    host, port = simulator_address
+    data_callback, error_callback = callbacks
     subrack = make_subrack(
         WebHardwareClient(host, port),
         logger,

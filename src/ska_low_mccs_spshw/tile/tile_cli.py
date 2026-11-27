@@ -185,7 +185,6 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendBeamData", jstr)
 
-    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedDataContinuous(
         self: MccsTileCli,
@@ -225,7 +224,6 @@ class MccsTileCli(metaclass=CliMeta):
                 "ChannelID mandatory argument...cannot be a NULL value"
             ) from exc
 
-    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedData(
         self: MccsTileCli,

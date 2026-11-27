@@ -2414,7 +2414,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         return task
 
-    # pylint: disable=too-many-arguments
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     @stb.long_running_commands.mark_long_running
     @stb.validators.validate_json_args

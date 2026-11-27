@@ -734,6 +734,7 @@ class SubrackDriver(
             # tick above max so the next free cycle retries immediately.
         return poll_request
 
+    # pylint: disable=too-many-branches
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
         """
         Poll the hardware.

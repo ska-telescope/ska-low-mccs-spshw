@@ -7,7 +7,6 @@
 # See LICENSE for more info.
 """A simplified SPS subrack device, built on a plain HTTP polling client."""
 
-
 __all__ = [
     "CommandOutcome",
     "DerivedValues",

@@ -25,6 +25,7 @@ snmpsim loads this file itself rather than importing it. It needs only the
 module variables rather than in the contexts snmpsim provides, so it reads as
 plain Python.
 """
+
 from __future__ import annotations
 
 from typing import Any

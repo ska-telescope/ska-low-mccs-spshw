@@ -17,6 +17,7 @@ simulator as it talks to a real PDU, with SNMP v2c and the community
 :py:func:`main` runs the simulator in the foreground, as the k8s pod does.
 :py:class:`PduSimulatorContextManager` runs it in a subprocess for a test.
 """
+
 from __future__ import annotations
 
 import importlib.resources

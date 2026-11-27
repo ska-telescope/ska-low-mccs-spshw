@@ -11,6 +11,7 @@ Tests of the PDU simulator alone, through a plain SNMP client.
 Each test starts its own simulator, so the outlet states it changes do not
 reach the next test.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -66,7 +67,7 @@ def _request(
         engine = SnmpEngine()
         try:
             target = await UdpTransportTarget.create(address, timeout=1, retries=0)
-            (error, status, _, binds) = await command(
+            error, status, _, binds = await command(
                 engine, CommunityData(community), target, ContextData(), *objects
             )
         finally:

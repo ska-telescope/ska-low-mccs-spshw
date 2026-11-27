@@ -15,6 +15,7 @@ key, or which path into the health status, feeds each signal, and which few
 values are converted on the way. The device mixes the class in and holds all
 the behaviour.
 """
+
 from __future__ import annotations
 
 import json

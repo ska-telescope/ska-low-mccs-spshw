@@ -20,6 +20,7 @@ commands run through, and the poller that reads it. It also supplies the
 :py:class:`~.pdu_link.PduLink` that ``On`` and ``Off`` switch the PDU ports
 through.
 """
+
 from __future__ import annotations
 
 import enum
@@ -433,11 +434,14 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
         if ReadKey.TPM_ON_OFF.value in values:
             tpm_on_off = values[ReadKey.TPM_ON_OFF.value]
             self._update_tpm_power_states(
-                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-                if tpm_on_off is None
-                else [
-                    PowerState.ON if is_on else PowerState.OFF for is_on in tpm_on_off
-                ],
+                (
+                    [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+                    if tpm_on_off is None
+                    else [
+                        PowerState.ON if is_on else PowerState.OFF
+                        for is_on in tpm_on_off
+                    ]
+                ),
                 timestamp,
             )
 
@@ -561,9 +565,11 @@ class MccsPrototypeSubrack(SubrackAttributes, SubrackCommands, MccsBaseInterface
             outcome = _PollOutcome.UNREACHABLE
         self._update_tpm_power_states(
             [
-                PowerState.NO_SUPPLY
-                if outcome == _PollOutcome.UNPOWERED
-                else PowerState.UNKNOWN
+                (
+                    PowerState.NO_SUPPLY
+                    if outcome == _PollOutcome.UNPOWERED
+                    else PowerState.UNKNOWN
+                )
             ]
             * SubrackData.TPM_BAY_COUNT,
             timestamp,

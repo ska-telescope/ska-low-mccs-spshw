@@ -7,6 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """A file to store health transition rules for station."""
+
 from __future__ import annotations
 
 from typing import Any

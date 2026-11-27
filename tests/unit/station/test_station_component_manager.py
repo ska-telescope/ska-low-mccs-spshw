@@ -383,6 +383,7 @@ def test_load_pointing_delays(
                     antenna_order_delays[antenna_no * 2 - 1],
                     antenna_order_delays[antenna_no * 2],
                 )
+        # pylint: disable=possibly-used-before-assignment
         expected_tile_arg[2 * channel + 1] = delay
         expected_tile_arg[2 * channel + 2] = delay_rate
 

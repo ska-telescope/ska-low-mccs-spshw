@@ -288,7 +288,7 @@ class TestOn:
         """
         return PowerState.ON
 
-    # pylint: disable=too-many-locals, too-many-arguments
+    # pylint: disable=too-many-locals
     def test_attribute_updates(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
@@ -452,7 +452,6 @@ class TestOn:
         )
         callbacks["component_state"].assert_not_called()
 
-    # pylint: disable=too-many-arguments
     def test_tpm_power_commands(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
@@ -590,7 +589,6 @@ class TestOn:
             power=PowerState.ON, consume_nonmatches=True
         )
 
-    # pylint: disable=too-many-arguments
     def test_other_commands(
         self: TestOn,
         subrack_simulator: SubrackSimulator,

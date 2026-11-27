@@ -6,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of an initialise test for a station."""
+
 from __future__ import annotations
 
 import time

@@ -55,11 +55,11 @@ url = "https://pypi.org/simple"
 
 [dependency-groups]
 dev = [
-    "pylint >= 2.17.5, <3.0.0",
+    "pylint >= 4.0.9, <5.0.0",
     "pylint-junit >= 0.3.2, <1.0.0",
-    "pytest >= 7.0.0, <8.0.0",
+    "pytest >= 9.0.3, <9.2",
     "pytest-xdist >= 3.6.1, <4.0.0",
-    "pytest-bdd >= 6.1.1, <7.0.0",
+    "pytest-bdd >= 7.3.0, <8.0.0",
     "pytest-cov >= 4.1.0, <5.0.0",
     "pytest-forked >= 1.6.0, <2.0.0",
     "pytest-json-report >= 1.5.0, <2.0.0",
@@ -67,7 +67,7 @@ dev = [
     "pytest-repeat >= 0.9.1, <1.0.0",
     "pytest-timeout >= 2.1.0, <3.0.0",
     "coverage >= 7.3.0, <8.0.0",
-    "black >= 23.7.0, <24.0.0",
+    "black >= 26.10.1, <27.0.0",
     "darglint >= 1.8.1, <2.0.0",
     "flake8 >= 6.1.0, <7.0.0",
     "flake8-formatter-junit-xml >= 0.0.6, <1.0.0",

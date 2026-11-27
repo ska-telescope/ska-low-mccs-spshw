@@ -6,6 +6,7 @@ disable=
     fixme,
     invalid-name,  # conflicts with Tango naming conventions
     logging-fstring-interpolation,
+    too-many-positional-arguments,  # device APIs and pytest fixtures are positional
 
 enable=
     useless-suppression,

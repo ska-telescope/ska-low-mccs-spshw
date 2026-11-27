@@ -130,7 +130,7 @@ def _callback(scheduler: mock.Mock, attribute_name: str) -> Callable[[Any], None
     :return: the callback.
     """
     for call in reversed(scheduler.register_event_callback.call_args_list):
-        (_device, name, event_type, callback) = call.args
+        _device, name, event_type, callback = call.args
         if name == attribute_name:
             assert event_type == tango.EventType.CHANGE_EVENT
             return callback
@@ -186,9 +186,11 @@ def test_port_power_state(value: Any, expected: PowerState) -> None:
         ([PowerState.UNKNOWN, PowerState.UNKNOWN], PowerState.UNKNOWN),
         ([], PowerState.UNKNOWN),
     ],
-    ids=lambda value: "-".join(state.name for state in value)
-    if isinstance(value, list)
-    else value.name,
+    ids=lambda value: (
+        "-".join(state.name for state in value)
+        if isinstance(value, list)
+        else value.name
+    ),
 )
 def test_combined_power_state(
     port_states: list[PowerState], expected: PowerState
@@ -279,7 +281,7 @@ def test_set_ports_switches_every_port(
     :param on: whether to switch the ports on.
     :param command: the ``MccsPdu`` command that should be sent.
     """
-    (result_code, _) = link.set_ports(on)
+    result_code, _ = link.set_ports(on)
 
     assert result_code == ResultCode.OK
     assert commands[command].call_args_list == [

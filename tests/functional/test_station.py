@@ -330,13 +330,10 @@ def ensure_spsstation_state_on(
         for tile in station_tiles
     ):
         if iters >= 60:
-            pytest.fail(
-                "Not all tiles came ON: "
-                f"""{[
+            pytest.fail("Not all tiles came ON: " f"""{[
                     (tile.dev_name(), tile.state(), tile.tileprogrammingstate)
                     for tile in station_tiles
-                ]}"""
-            )
+                ]}""")
 
         time.sleep(1)
         iters += 1
@@ -415,13 +412,10 @@ def check_spsstation_state_standby(
     iters = 0
     while any(tile.state() not in [tango.DevState.OFF] for tile in station_tiles):
         if iters >= 60:
-            pytest.fail(
-                "Not all tiles came OFF: "
-                f"""{[
+            pytest.fail("Not all tiles came OFF: " f"""{[
                     (tile.dev_name(), tile.state(), tile.tileprogrammingstate)
                     for tile in station_tiles
-                ]}"""
-            )
+                ]}""")
 
         time.sleep(1)
         iters += 1

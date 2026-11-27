@@ -30,7 +30,6 @@ class TileHealthModel(BaseHealthModel):
 
     _health_rules: TileHealthRules
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: TileHealthModel,
         health_changed_callback: HealthChangedCallbackProtocol,

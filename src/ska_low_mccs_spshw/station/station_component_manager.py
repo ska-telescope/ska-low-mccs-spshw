@@ -482,7 +482,6 @@ class _BandpassDaqProxy(DeviceComponentManager):
 class _WrenProxy(DeviceComponentManager):
     """A proxy to a WREN for a station to use."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self,
         fqdn: str,
@@ -1219,15 +1218,13 @@ class SpsStationComponentManager(
 
         try:
             tmdata = TMData([antenna_mapping_uri])
-        # pylint: disable=broad-except
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             self.logger.error(f"Unable to create TMData object, check uri. Error: {e}")
             return
 
         try:
             full_dict = tmdata[antenna_mapping_filepath].get_dict()
-        # pylint: disable=broad-except
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             self.logger.error(
                 "Unable to create dictionary from imported TMData,"
                 f"check uploaded TelModel data. Error: {e}"
@@ -1309,12 +1306,12 @@ class SpsStationComponentManager(
                     "Skipping this antenna."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config.get("delay_x", antenna_config["delay"])
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config.get("delay_y", antenna_config["delay"])
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config.get("delay_x", antenna_config["delay"])
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config.get("delay_y", antenna_config["delay"])
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1555,9 +1552,9 @@ class SpsStationComponentManager(
             case "isbeamformerrunning":
                 self._is_beamformer_running[logical_tile_id] = None
             case "channeliserrounding":
-                self._channeliser_roundings[
-                    logical_tile_id, :
-                ] = INVALID_CHANNELISER_ROUNDING
+                self._channeliser_roundings[logical_tile_id, :] = (
+                    INVALID_CHANNELISER_ROUNDING
+                )
             case "beamformertable":
                 self._beamformer_table = np.full(
                     (48, 7), INVALID_FINAL_TILE_VALUE, dtype=int
@@ -2458,13 +2455,13 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Starting on sequence on subracks")
             result_code, message = self._turn_on_subracks(task_abort_event)
-        if result_code != ResultCode.OK:
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result=(result_code, f"Failed to turn on subracks: {message}"),
-                )
-                return
+            if result_code != ResultCode.OK:
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(result_code, f"Failed to turn on subracks: {message}"),
+                    )
+                    return
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
         self.logger.debug("Starting off sequence on tiles")

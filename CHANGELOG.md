@@ -28,6 +28,7 @@ blind 180s timeout.
 * [THORN-824] Install ska-low-sps-tpm-api 5.0.1 from the SKAO index instead of git.
 * [THORN-824] Remove runtime dependencies that SPSHW does not use, among them ska-low-mccs-daq, matplotlib, pyqt5, mongoengine and scapy.
 * [THORN-824] Update fastapi to 0.162.5, uvicorn to 0.54.0 and httpx to 0.28.1 to fix advisories.
+* [THORN-824] Update black to 26.10.1, pylint to 4.1.4, pytest to 9.1.1 and pytest-bdd to 7.3.0 to fix advisories.
 
 ## 18.0.0
 

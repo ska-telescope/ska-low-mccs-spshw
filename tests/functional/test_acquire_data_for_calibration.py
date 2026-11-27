@@ -194,6 +194,37 @@ def station_is_synchronised(
         pytest.fail(f"Not all tiles are Synchronised: {station.tileProgrammingState}")
 
 
+@pytest.fixture(name="pending_data_requests_subscriptions")
+def pending_data_requests_subscriptions_fixture(
+    station_tiles: list[tango.DeviceProxy],
+) -> Generator[None, None, None]:
+    """
+    Hold a subscription to ``pendingDataRequests`` on every tile.
+
+    Tango only sends a change event when the value differs from the last one it
+    sent, and it stops tracking that value when nobody has subscribed for 600 s.
+    Subscribing before the tiles transmit makes Tango see the change to True, so
+    the change back to False reaches the final check.
+
+    :param station_tiles: the Tile devices belonging to the station under test.
+
+    :yields: control while the subscriptions are open.
+    """
+    subscriptions = [
+        (
+            tile,
+            tile.subscribe_event(
+                "pendingDataRequests", tango.EventType.CHANGE_EVENT, lambda _: None
+            ),
+        )
+        for tile in station_tiles
+    ]
+    yield
+    for tile, subscription_id in subscriptions:
+        tile.unsubscribe_event(subscription_id)
+
+
+# pylint: disable=too-many-arguments
 @when(
     parsers.parse(
         "I acquire calibration data for channels {first_channel:d} to {last_channel:d}"
@@ -206,6 +237,7 @@ def acquire_data_for_calibration(
     first_channel: int,
     last_channel: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    pending_data_requests_subscriptions: None,
 ) -> Generator[dict[str, Any], None, None]:
     """
     Command the station to acquire calibration data for a range of channels.
@@ -228,6 +260,8 @@ def acquire_data_for_calibration(
     :param last_channel: the last channel to acquire data for.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param pending_data_requests_subscriptions: requested so that every tile is
+        subscribed before it starts to transmit.
 
     :yields: details of the submitted acquisition, for the assertion step.
     """

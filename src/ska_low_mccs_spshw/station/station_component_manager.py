@@ -1635,7 +1635,9 @@ class SpsStationComponentManager(
             attribute_name in _FINAL_TILE_ATTRIBUTES
             and logical_tile_id != self._number_of_tiles - 1
         ):
-            # Only the final tile's value is used.
+            # Certain attributes should only be considered for
+            # the last tile, as such, if we see that attribute from
+            # a different tile, we skip
             return False
         match attribute_name:
             case "timing_pps_delay":

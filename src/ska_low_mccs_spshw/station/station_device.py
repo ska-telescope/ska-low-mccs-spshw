@@ -277,6 +277,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         default_value=2400,  # [ms]
     )
 
+    # Emitted whenever the health may have changed. Its value is unused.
+    _health_report_outdated = Signal[None]()
+
     # ---------------
     # Initialisation
     # ---------------
@@ -768,9 +771,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             else:
                 health_details[source] = new_details
             self._health_details = health_details
-
-    # Emitted whenever the health may have changed. Its value is unused.
-    _health_report_outdated = Signal[None]()
 
     def _push_health_report(self: SpsStation) -> None:
         """

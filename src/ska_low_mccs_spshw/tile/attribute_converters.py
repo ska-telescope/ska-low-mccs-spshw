@@ -109,7 +109,7 @@ def none_if_missing(
 
     The signal bus publishes a ``None`` from an attribute's ``to_tango``
     conversion with ``ATTR_INVALID`` quality. A warning naming the missing
-    entries is logged each time, so it is clear why the attribute is invalid.
+    entries is logged each time in TPM-API.
 
     :param converter: the converter to wrap.
 

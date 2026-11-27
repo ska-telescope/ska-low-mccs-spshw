@@ -20,6 +20,7 @@ import logging
 import re
 import threading
 import time
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
@@ -161,6 +162,20 @@ def _strip_health_report_values(health_report: str) -> str:
         elif not in_attribute_lines:
             stripped.append(line)
     return "\n".join(stripped)
+
+
+@dataclass(frozen=True)
+class _DaisyChainStage:
+    """One stage of the beamformer daisy chain check."""
+
+    name: str
+    # Called with the component manager. Returns True if the stage
+    # passes, False if it fails, or None if it cannot yet be verified.
+    check: Callable[[SpsStationComponentManager], bool | None]
+    failure_reason: HealthDetailText
+    remedy: HealthDetailText
+    # Required if, and only if, check can return None.
+    unknown_reason: HealthDetailText | None = None
 
 
 class _BandpassDaqReadRetryError(RuntimeError):
@@ -1982,56 +1997,24 @@ class SpsStationComponentManager(
         Unless the result is True, the details give the reason that stage
         failed, or cannot be verified, and a remedy.
         """
-        stages: dict[str, dict[str, Any]] = {
-            "tiles_on": {
-                "method": self._check_daisy_chain_tiles_on,
-                "failure_case": HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
-                "unknown_case": None,
-                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
-            },
-            "tiles_online": {
-                "method": self._check_daisy_chain_tiles_online,
-                "failure_case": HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
-                "unknown_case": None,
-                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
-            },
-            "tiles_initialised": {
-                "method": self._check_daisy_chain_tiles_initialised,
-                "failure_case": (
-                    HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON
-                ),
-                "unknown_case": None,
-                "remedy": HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
-            },
-            "destination_ips": {
-                "method": self._validate_beamformer_daisy_chain_ips,
-                "failure_case": HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
-                "unknown_case": HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
-                "remedy": HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
-            },
-            "tiles_receiving": {
-                "method": self._check_daisy_chain_tiles_receiving,
-                "failure_case": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON,
-                "unknown_case": None,
-                "remedy": HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REMEDY,
-            },
-        }
         valid: Optional[bool] = True
         details: dict[str, str] | None = None
         failed_stage = ""
         power_states = list(self._tile_power_states.values())
         if not all(power == PowerState.OFF for power in power_states):
-            for stage_name, stage in stages.items():
-                valid = stage["method"]()
-                if not valid:
-                    failed_stage = stage_name
-                    case = (
-                        stage["failure_case"]
-                        if valid is False
-                        else stage["unknown_case"]
-                    )
-                    details = {"reason": case.value, "remedy": stage["remedy"].value}
-                    break
+            # Stop at the first stage that does not pass
+            for stage in self._DAISY_CHAIN_STAGES:
+                valid = stage.check(self)
+                if valid:
+                    continue
+                failed_stage = stage.name
+                reason = (
+                    stage.unknown_reason
+                    if valid is None and stage.unknown_reason is not None
+                    else stage.failure_reason
+                )
+                details = {"reason": reason.value, "remedy": stage.remedy.value}
+                break
 
         if (valid, details) == (
             self._beamformer_daisy_chain_valid,
@@ -2155,6 +2138,41 @@ class SpsStationComponentManager(
             if not receiving:
                 return False
         return True
+
+    # The stages of the beamformer daisy chain check in order.
+    _DAISY_CHAIN_STAGES: tuple[_DaisyChainStage, ...] = (
+        _DaisyChainStage(
+            name="tiles_on",
+            check=_check_daisy_chain_tiles_on,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_ON_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="tiles_online",
+            check=_check_daisy_chain_tiles_online,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_ONLINE_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="tiles_initialised",
+            check=_check_daisy_chain_tiles_initialised,
+            failure_reason=HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_TILES_NOT_INITIALISED_REMEDY,
+        ),
+        _DaisyChainStage(
+            name="destination_ips",
+            check=_validate_beamformer_daisy_chain_ips,
+            failure_reason=HealthDetailText.DAISY_CHAIN_IPS_WRONG_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_IPS_REMEDY,
+            unknown_reason=HealthDetailText.DAISY_CHAIN_IPS_UNKNOWN_REASON,
+        ),
+        _DaisyChainStage(
+            name="tiles_receiving",
+            check=_check_daisy_chain_tiles_receiving,
+            failure_reason=HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REASON,
+            remedy=HealthDetailText.DAISY_CHAIN_NOT_RECEIVING_REMEDY,
+        ),
+    )
 
     def _validate_tile_data_routing(
         self: SpsStationComponentManager,

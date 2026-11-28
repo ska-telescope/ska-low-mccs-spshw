@@ -14,6 +14,11 @@ for i in $(seq 1 $TOTAL_ITERATIONS); do
   CUCUMBER_JSON_PATH="$ITERATION_DIR/cucumber.json" \
   JSON_REPORT_PATH="$ITERATION_DIR/report.json" \
   make k8s-test || true
+
+  # The next iteration writes its pod logs to the same path.
+  if [ -d build/k8s-logs ]; then
+    mv build/k8s-logs "$ITERATION_DIR/k8s-logs"
+  fi
   
   if [ -f "$ITERATION_DIR/functional-tests.xml" ]; then
     read TESTS FAILURES ERRORS <<< $(python3 -c "

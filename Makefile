@@ -171,6 +171,8 @@ endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
 
+# Stream pod logs while the tests run. kubectl logs only returns the current
+# rotated log file, so the snapshot that k8sSaveLogs takes afterwards can miss the start.
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \
 		$(K8S_TEST_RUNNER_CHART_RELEASE) $(K8S_TEST_RUNNER_CHART_NAME) \
@@ -178,12 +180,18 @@ k8s-do-test:
 	kubectl -n $(KUBE_NAMESPACE) wait pod ska-low-mccs-k8s-test-runner \
 		--for=condition=ready --timeout=$(K8S_TIMEOUT)
 	kubectl -n $(KUBE_NAMESPACE) cp tests/ ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/tests
+	mkdir -p build/k8s-logs/stream ; \
+	for pod in $$(kubectl -n $(KUBE_NAMESPACE) get pods -o name) ; do \
+		kubectl -n $(KUBE_NAMESPACE) logs --follow $$pod > build/k8s-logs/stream/$${pod#pod/}.log 2>&1 & \
+		log_pids="$$log_pids $$!" ; \
+	done ; \
 	kubectl -n $(KUBE_NAMESPACE) exec ska-low-mccs-k8s-test-runner -- bash -c \
 		"cd $(K8S_TEST_RUNNER_WORKING_DIRECTORY) && \
 		mkdir -p build/reports && \
 		$(K8S_TEST_RUNNER_PIP_INSTALL_COMMAND) && \
 		STATION_LABEL=$(STATION_LABEL) $(PYTHON_VARS_BEFORE_K8S_PYTEST) pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
 	EXIT_CODE=$$? ; \
+	kill $$log_pids 2>/dev/null ; \
 	kubectl -n $(KUBE_NAMESPACE) cp ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/build/ ./build/ ; \
 	source $(K8S_SUPPORT); \
 	k8sSaveLogs $(KUBE_NAMESPACE); \
